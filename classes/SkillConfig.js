@@ -678,9 +678,9 @@ class SkillConfig {
             synergies: ['freeze', 'shatter'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
             tiers: [
-                { desc: '命中减速 30%，持续 2 秒', params: { slow: 0.3, duration: 2 } },
-                { desc: '减速 50%，持续 3 秒', params: { slow: 0.5, duration: 3 } },
-                { desc: '减速 70%，持续 3 秒，未减速时首次命中冻结 0.5 秒', params: { slow: 0.7, duration: 3, freeze: 0.5 } },
+                { desc: '命中减速 30%，持续 2 秒，额外 10% 伤害', params: { slow: 0.3, duration: 2, dmgBonus: 0.1 } },
+                { desc: '减速 50%，持续 3 秒，+20% 伤害', params: { slow: 0.5, duration: 3, dmgBonus: 0.2 } },
+                { desc: '减速 70%，首次命中冻结 0.5 秒，+30% 伤害', params: { slow: 0.7, duration: 3, freeze: 0.5, dmgBonus: 0.3 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 sm.registerHandler(SkillEffectType.ON_HIT, 'frost_rounds', function(ctx) {
@@ -688,6 +688,7 @@ class SkillConfig {
                     if (!inst) return;
                     const p = inst.getCurrentEffect().params;
                     ctx.enemy.slowAmount = Math.max(ctx.enemy.slowAmount || 0, p.slow);
+                    ctx.bullet.damage *= (1 + p.dmgBonus);
                     if (p.freeze && !ctx.enemy.slowAmount) {
                         ctx.enemy.frozen = true;
                         ctx.enemy.frozenTimer = p.freeze;
@@ -739,8 +740,8 @@ class SkillConfig {
             synergies: ['frost_rounds', 'freeze'],
             evolveCondition: { type: EvolutionCondition.DAMAGE_ELITE, value: 1 },
             tiers: [
-                { desc: '攻击冻结敌人必定暴击，暴击伤害 +100%', params: { critDmgBonus: 1.0 } },
-                { desc: '暴击伤害 +200%，碎冰时释放冰环（150 范围 80% 伤害）', params: { critDmgBonus: 2.0, novaRadius: 150, novaDmg: 0.8 } },
+                { desc: '攻击冻结敌人必定暴击，暴击伤害 +150%', params: { critDmgBonus: 1.5 } },
+                { desc: '暴击伤害 +300%，碎冰时冰环（180 范围 120% 伤害）', params: { critDmgBonus: 3.0, novaRadius: 180, novaDmg: 1.2 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 sm.registerHandler(SkillEffectType.ON_HIT, 'shatter', function(ctx) {
@@ -802,9 +803,9 @@ class SkillConfig {
             synergies: ['frost_rounds', 'absolute_zero'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 40 },
             tiers: [
-                { desc: '每击杀 8 个敌人释放冰环（200 范围，减速 80%）', params: { killsNeeded: 8, radius: 200, slow: 0.8 } },
-                { desc: '每 6 个，范围 250', params: { killsNeeded: 6, radius: 250, slow: 0.8 } },
-                { desc: '每 4 个，范围 300 + 100% 伤害', params: { killsNeeded: 4, radius: 300, slow: 0.8, dmgMul: 1.0 } },
+                { desc: '每击杀 8 个敌人释放冰环（200 范围，减速 80%+60% 伤害）', params: { killsNeeded: 8, radius: 200, slow: 0.8, dmgMul: 0.6 } },
+                { desc: '每 6 个，范围 250，80% 伤害', params: { killsNeeded: 6, radius: 250, slow: 0.8, dmgMul: 0.8 } },
+                { desc: '每 4 个，范围 300，120% 伤害', params: { killsNeeded: 4, radius: 300, slow: 0.8, dmgMul: 1.2 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 if (!sm.runtimeState._iceNova) sm.runtimeState._iceNova = { kills: 0 };
@@ -821,8 +822,8 @@ class SkillConfig {
                             if (!e.active) continue;
                             const d2 = (ctx.player.x - e.x) ** 2 + (ctx.player.y - e.y) ** 2;
                             if (d2 < p.radius * p.radius) {
-                                e.slowAmount = p.slow;
-                                if (p.dmgMul) e.takeDamage(ctx.player.bulletDamage * p.dmgMul);
+                            e.slowAmount = p.slow;
+                            e.takeDamage(ctx.player.bulletDamage * p.dmgMul);
                             }
                         }
                         ctx.particleManager.spawnExplosion(ctx.player.x, ctx.player.y, '#aaddff', 15);
@@ -924,8 +925,8 @@ class SkillConfig {
             synergies: ['freeze', 'absolute_zero'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 50 },
             tiers: [
-                { desc: '冻结时间 +1 秒，冻结敌人每秒受到 2% 最大生命伤害', params: { freezeBonus: 1, hpDps: 0.02 } },
-                { desc: '冻结时间 +2 秒，每秒 3% 最大生命伤害', params: { freezeBonus: 2, hpDps: 0.03 } },
+                { desc: '冻结时间 +1 秒，冻结敌人每秒受到 4% 最大生命伤害', params: { freezeBonus: 1, hpDps: 0.04 } },
+                { desc: '冻结时间 +2 秒，每秒 6% 最大生命伤害', params: { freezeBonus: 2, hpDps: 0.06 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
