@@ -962,6 +962,21 @@ function _ensureBurnProcessor(sm) {
                 );
             }
         }
+        // 处理冰霜粒子
+        for (const e of ctx.enemies) {
+            if (!e.active) continue;
+            if (e.frozen && ctx.particleManager && Math.random() < 0.4) {
+                ctx.particleManager.spawnTrail(
+                    e.x + (Math.random() - 0.5) * e.size, e.y + (Math.random() - 0.5) * e.size,
+                    Math.PI / 2 + Math.random() * 0.5, '#aaddff'
+                );
+            } else if (e.slowAmount > 0 && ctx.particleManager && Math.random() < 0.15) {
+                ctx.particleManager.spawnHit(
+                    e.x + (Math.random() - 0.5) * e.size, e.y + (Math.random() - 0.5) * e.size,
+                    '#ccddff', 1
+                );
+            }
+        }
         // 处理火焰区域
         const zones = sm.runtimeState._fireZones;
         if (zones && zones.length > 0) {
