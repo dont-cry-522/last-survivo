@@ -33,6 +33,7 @@ class Config {
         magnetRange: 80,       // 经验磁铁初始范围
         expMultiplier: 1.0,    // 经验获取倍率
         levelHpBonus: 5,       // 每次升级增加最大生命值
+        levelDamageBonus: 1,   // 每次升级增加子弹伤害
         size: 20,              // 玩家碰撞半径
     };
 
