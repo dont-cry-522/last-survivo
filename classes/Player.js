@@ -81,13 +81,21 @@ class Player {
     }
 
     onKeyDown(key) {
-        const k = key.toLowerCase();
+        let k = key.toLowerCase();
+        if (k === 'arrowup' || k === 'home' || k === 'pageup' || k === 'numpad8') k = 'w';
+        if (k === 'arrowdown' || k === 'end' || k === 'pagedown' || k === 'numpad2') k = 's';
+        if (k === 'arrowleft' || k === 'numpad4') k = 'a';
+        if (k === 'arrowright' || k === 'numpad6') k = 'd';
         if (k in this.keys) this.keys[k] = true;
         if (k === 'shift') { this.keys.shift = true; this.tryDash(); }
     }
 
     onKeyUp(key) {
-        const k = key.toLowerCase();
+        let k = key.toLowerCase();
+        if (k === 'arrowup' || k === 'home' || k === 'pageup' || k === 'numpad8') k = 'w';
+        if (k === 'arrowdown' || k === 'end' || k === 'pagedown' || k === 'numpad2') k = 's';
+        if (k === 'arrowleft' || k === 'numpad4') k = 'a';
+        if (k === 'arrowright' || k === 'numpad6') k = 'd';
         if (k in this.keys) this.keys[k] = false;
         if (k === 'shift') this.keys.shift = false;
     }
