@@ -140,6 +140,7 @@ class SkillManager {
      */
     acquire(skillId, gameState) {
         const existing = this._findOwned(skillId);
+        const player = gameState ? gameState.player : null;
 
         if (existing) {
             if (existing.isMaxed) {
@@ -147,19 +148,24 @@ class SkillManager {
             }
 
             const check = existing.checkEvolution(gameState);
+            const prevParams = existing.getCurrentEffect().params;
             if (check.canEvolve) {
                 existing.evolve();
                 this._updateRegistry(existing);
+                if (existing.config.apply && player) {
+                    existing.config.apply(player, this, existing.getCurrentEffect().params, prevParams);
+                }
                 return { action: 'evolved', instance: existing };
             } else {
-                // 条件不足 → 数值强化（暂用 evolve 模拟，后续可扩展）
                 existing.evolve();
                 this._updateRegistry(existing);
+                if (existing.config.apply && player) {
+                    existing.config.apply(player, this, existing.getCurrentEffect().params, prevParams);
+                }
                 return { action: 'enhanced', instance: existing };
             }
         }
 
-        // 首次获得
         const def = SkillConfig.POOL.find(d => d.id === skillId);
         if (!def) return null;
 
@@ -167,9 +173,8 @@ class SkillManager {
         this.skills.push(instance);
         this._updateRegistry(instance);
 
-        // 应用初始效果
-        if (def.apply) {
-            def.apply(null, this, instance.getCurrentEffect().params);
+        if (def.apply && player) {
+            def.apply(player, this, instance.getCurrentEffect().params);
         }
 
         this._checkSynergies();
