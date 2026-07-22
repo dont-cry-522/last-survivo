@@ -186,6 +186,8 @@ class Player {
             this.exp -= this.expToNext;
             this.level++;
             this.expToNext = Config.getExpForLevel(this.level);
+            this.maxHp += Config.PLAYER.levelHpBonus;
+            this.hp += Config.PLAYER.levelHpBonus;
             leveledUp = true;
         }
         return leveledUp;

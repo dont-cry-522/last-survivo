@@ -385,13 +385,10 @@ class Game {
 
         // 检查升级
         if (leveledUp || this.player.exp >= this.player.expToNext) {
-            // 处理可能的多级连升
             while (this.player.exp >= this.player.expToNext) {
                 this.player.exp -= this.player.expToNext;
                 this.player.level++;
                 this.player.expToNext = Config.getExpForLevel(this.player.level);
-                this.player.maxHp += Config.PLAYER.levelHpBonus;
-                this.player.hp += Config.PLAYER.levelHpBonus;
             }
             this.triggerUpgrade();
         }
