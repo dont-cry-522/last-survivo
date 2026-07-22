@@ -39,8 +39,6 @@ class Enemy {
         this.knockbackDecay = EnemyConfig.KNOCKBACK_DECAY;
 
         this.contactCooldown = 0;
-        this.burnStacks = 0;
-        this.burnTimer = 0;
 
         this.hpMultiplier = 1;
         this.speedMultiplier = 1;
@@ -71,14 +69,6 @@ class Enemy {
         this.knockbackY = 0;
         this._triggeredExplode = false;
         this.contactCooldown = 0;
-        this.burnStacks = 0;
-        this.burnTimer = 0;
-        this.burnDmgPerStack = 0;
-        this.slowAmount = 0;
-        this.frozen = false;
-        this.frozenTimer = 0;
-        this.paralyzed = false;
-        this.paralyzeTimer = 0;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
@@ -134,30 +124,13 @@ class Enemy {
             this.contactCooldown -= deltaTime;
         }
 
-        if (this.burnStacks > 0) {
-            this.burnTimer -= deltaTime;
-            if (this.burnTimer <= 0) { this.burnStacks = 0; this.burnTimer = 0; }
-        }
-
-        if (this.frozen) {
-            this.frozenTimer -= deltaTime;
-            if (this.frozenTimer <= 0) { this.frozen = false; }
-        }
-
-        if (!this.frozen && this.slowAmount > 0) {
-            this.slowAmount = Math.max(0, this.slowAmount - deltaTime * 0.5);
-        }
-
-        if (this.paralyzed) {
-            this.paralyzeTimer -= deltaTime;
-            if (this.paralyzeTimer <= 0) { this.paralyzed = false; }
-        }
+        if (Enemy._statusSystem) Enemy._statusSystem.update(this, deltaTime);
 
         this.knockbackX *= this.knockbackDecay;
         this.knockbackY *= this.knockbackDecay;
 
         const angle = Utils.angle(this.x, this.y, player.x, player.y);
-        const speedMul = (this.frozen || this.paralyzed) ? 0 : (1 - this.slowAmount);
+        const speedMul = Enemy._statusSystem ? Enemy._statusSystem.getSpeedMultiplier(this) : 1;
         const moveX = Math.cos(angle) * this.speed * speedMul * deltaTime * 60;
         const moveY = Math.sin(angle) * this.speed * speedMul * deltaTime * 60;
 
@@ -292,6 +265,44 @@ class Enemy {
         ctx.restore();
     }
 }
+
+// StatusSystem 委托 getter/setter（向后兼容技能直接读写）
+Object.defineProperties(Enemy.prototype, {
+    burnStacks: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.burnStacks(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setBurnStacks(this, v); }
+    },
+    burnTimer: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.burnTimer(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setBurnTimer(this, v); }
+    },
+    burnDmgPerStack: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.burnDmgPerStack(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setBurnDmgPerStack(this, v); }
+    },
+    slowAmount: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.slowAmount(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setSlowAmount(this, v); }
+    },
+    frozen: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.frozen(this) : false; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setFrozen(this, v); }
+    },
+    frozenTimer: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.frozenTimer(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setFrozenTimer(this, v); }
+    },
+    paralyzed: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.paralyzed(this) : false; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setParalyzed(this, v); }
+    },
+    paralyzeTimer: {
+        get() { return Enemy._statusSystem ? Enemy._statusSystem.paralyzeTimer(this) : 0; },
+        set(v) { if (Enemy._statusSystem) Enemy._statusSystem.setParalyzeTimer(this, v); }
+    },
+});
+
+Enemy._statusSystem = null;
 
 /**
  * 敌人管理器

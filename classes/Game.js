@@ -21,6 +21,9 @@ class Game {
         this.canvas.width = Config.CANVAS_WIDTH;
         this.canvas.height = Config.CANVAS_HEIGHT;
 
+        this.statusSystem = new StatusSystem();
+        Enemy._statusSystem = this.statusSystem;
+
         // 游戏状态: start, playing, paused, upgrading, gameover
         this.state = 'start';
 
@@ -296,6 +299,8 @@ class Game {
         this.skillUI.close();
         this._announced = {};
         this._announcements = [];
+        this.statusSystem = new StatusSystem();
+        Enemy._statusSystem = this.statusSystem;
     }
 
     /**
