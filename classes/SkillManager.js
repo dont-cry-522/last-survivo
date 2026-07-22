@@ -355,10 +355,18 @@ class SkillManager {
      * @param {Object} gameContext - { player, enemies, bulletManager, particleManager }
      */
     update(deltaTime, gameContext) {
-        // PERIODIC 效果
+        // 系统级 PERIODIC 处理器（如燃烧系统）
+        const sysHandlers = this.handlers[SkillEffectType.PERIODIC] || {};
+        for (const skillId in sysHandlers) {
+            if (skillId.startsWith('__')) {
+                sysHandlers[skillId](deltaTime, gameContext);
+            }
+        }
+
+        // PERIODIC 效果（技能实例）
         const periodics = this.effectRegistry[SkillEffectType.PERIODIC] || [];
         for (const inst of periodics) {
-            const handler = this.handlers[SkillEffectType.PERIODIC]?.[inst.id];
+            const handler = sysHandlers[inst.id];
             if (handler) handler(deltaTime, gameContext, inst);
         }
 
