@@ -1,13 +1,13 @@
-/**
+﻿/**
  * ============================================================
- *  Boss.js - Boss 敌人
+ *  Boss.js - Boss 鏁屼汉
  * ============================================================
- *  每90秒出现的强力Boss
- *  技能：冲撞、范围AOE攻击
- *  特效：红色光圈、警告文字、震屏
- *  TODO: 可以加入更多Boss类型，每种有独特技能
- *  TODO: 可以加入Boss阶段转换（血量到阈值切换模式）
- *  TODO: 可以加入召唤小怪技能
+ *  姣?0绉掑嚭鐜扮殑寮哄姏Boss
+ *  鎶€鑳斤細鍐叉挒銆佽寖鍥碅OE鏀诲嚮
+ *  鐗规晥锛氱孩鑹插厜鍦堛€佽鍛婃枃瀛椼€侀渿灞?
+ *  TODO: 鍙互鍔犲叆鏇村Boss绫诲瀷锛屾瘡绉嶆湁鐙壒鎶€鑳?
+ *  TODO: 鍙互鍔犲叆Boss闃舵杞崲锛堣閲忓埌闃堝€煎垏鎹㈡ā寮忥級
+ *  TODO: 鍙互鍔犲叆鍙敜灏忔€妧鑳?
  * ============================================================
  */
 
@@ -26,7 +26,7 @@ class Boss {
         this.color = '#ee5253';
         this.glowColor = 'rgba(238, 82, 83, 0.8)';
 
-        // 冲撞技能
+        // 鍐叉挒鎶€鑳?
         this.chargeSpeed = 6;
         this.chargeCooldown = 5;
         this.chargeTimer = 5;
@@ -34,11 +34,11 @@ class Boss {
         this.chargeDuration = 0.8;
         this.chargeCurrentDuration = 0;
         this.chargeDirection = { x: 0, y: 0 };
-        this.chargeWindup = 1; // 冲撞前摇
+        this.chargeWindup = 1; // 鍐叉挒鍓嶆憞
         this.chargeWindupTimer = 0;
         this.isWindup = false;
 
-        // 范围攻击
+        // 鑼冨洿鏀诲嚮
         this.aoeRadius = 150;
         this.aoeDamage = 30;
         this.aoeCooldown = 8;
@@ -49,22 +49,22 @@ class Boss {
         this.aoeX = 0;
         this.aoeY = 0;
 
-        // 受击闪烁
+        // 鍙楀嚮闂儊
         this.hitFlash = 0;
 
-        // 出现警告
+        // 鍑虹幇璀﹀憡
         this.spawnWarning = true;
         this.spawnWarningTimer = 2;
 
-        // 难度缩放
+        // 闅惧害缂╂斁
         this.hpMultiplier = 1;
 
-        // 音频引用
+        // 闊抽寮曠敤
         this.audio = null;
     }
 
     /**
-     * 初始化Boss
+     * 鍒濆鍖朆oss
      */
     init(x, y, hpMultiplier = 1) {
         const cfg = Config.BOSS;
@@ -96,7 +96,7 @@ class Boss {
     }
 
     /**
-     * 受到伤害
+     * 鍙楀埌浼ゅ
      */
     takeDamage(amount) {
         this.hp -= amount;
@@ -110,7 +110,7 @@ class Boss {
     }
 
     /**
-     * 死亡
+     * 姝讳骸
      */
     die(particleManager, experienceManager, game) {
         this.active = false;
@@ -136,7 +136,7 @@ class Boss {
     }
 
     /**
-     * 开始冲撞前摇
+     * 寮€濮嬪啿鎾炲墠鎽?
      */
     startCharge(player) {
         this.isWindup = true;
@@ -148,7 +148,7 @@ class Boss {
     }
 
     /**
-     * 执行冲撞
+     * 鎵ц鍐叉挒
      */
     executeCharge() {
         this.isWindup = false;
@@ -158,7 +158,7 @@ class Boss {
     }
 
     /**
-     * 开始AOE警告
+     * 寮€濮婣OE璀﹀憡
      */
     startAoe(player) {
         this.isAoeWarning = true;
@@ -168,7 +168,7 @@ class Boss {
     }
 
     /**
-     * 执行AOE
+     * 鎵цAOE
      */
     executeAoe(particleManager, player, game) {
         this.isAoeWarning = false;
@@ -181,7 +181,7 @@ class Boss {
 
         if (this.audio) this.audio.bossAOE();
 
-        // 范围伤害
+        // 鑼冨洿浼ゅ
         const dist = Utils.distance(this.aoeX, this.aoeY, player.x, player.y);
         if (dist < this.aoeRadius + player.size) {
             player.takeDamage(this.aoeDamage);
@@ -191,29 +191,29 @@ class Boss {
     }
 
     /**
-     * 更新Boss
+     * 鏇存柊Boss
      */
     update(deltaTime, player, particleManager, game) {
         if (!this.active) return;
 
-        // 出现警告
+        // 鍑虹幇璀﹀憡
         if (this.spawnWarning) {
             this.spawnWarningTimer -= deltaTime;
             if (this.spawnWarningTimer <= 0) {
                 this.spawnWarning = false;
             }
-            return; // 警告期间不移动
+            return; // 璀﹀憡鏈熼棿涓嶇Щ鍔?
         }
 
-        // 受击闪烁
+        // 鍙楀嚮闂儊
         if (this.hitFlash > 0) {
             this.hitFlash -= deltaTime;
         }
 
-        // 冲撞前摇
+        // 鍐叉挒鍓嶆憞
         if (this.isWindup) {
             this.chargeWindupTimer -= deltaTime;
-            // 前摇期间缓慢跟随
+            // 鍓嶆憞鏈熼棿缂撴參璺熼殢
             const angle = Utils.angle(this.x, this.y, player.x, player.y);
             this.x += Math.cos(angle) * this.speed * 0.3 * deltaTime * 60;
             this.y += Math.sin(angle) * this.speed * 0.3 * deltaTime * 60;
@@ -224,18 +224,18 @@ class Boss {
             return;
         }
 
-        // 冲撞中
+        // 鍐叉挒涓?
         if (this.isCharging) {
             this.chargeCurrentDuration -= deltaTime;
             this.x += this.chargeDirection.x * this.chargeSpeed * deltaTime * 60;
             this.y += this.chargeDirection.y * this.chargeSpeed * deltaTime * 60;
 
-            // 冲撞接触伤害
+            // 鍐叉挒鎺ヨЕ浼ゅ
             if (Utils.circleCollision(this.x, this.y, this.size, player.x, player.y, player.size)) {
                 player.takeDamage(this.damage * 1.5);
             }
 
-            // 冲刺残影
+            // 鍐插埡娈嬪奖
             if (Math.random() < 0.5) {
                 particleManager.spawnAfterimage(this.x, this.y, this.size, this.color);
             }
@@ -247,34 +247,34 @@ class Boss {
             return;
         }
 
-        // AOE警告中
+        // AOE璀﹀憡涓?
         if (this.isAoeWarning) {
             this.aoeWarningTimer -= deltaTime;
             if (this.aoeWarningTimer <= 0) {
                 this.executeAoe(particleManager, player, game);
             }
-            // 警告期间正常移动但减速
+            // 璀﹀憡鏈熼棿姝ｅ父绉诲姩浣嗗噺閫?
             const angle = Utils.angle(this.x, this.y, player.x, player.y);
             this.x += Math.cos(angle) * this.speed * 0.5 * deltaTime * 60;
             this.y += Math.sin(angle) * this.speed * 0.5 * deltaTime * 60;
             return;
         }
 
-        // 普通追踪移动
+        // 鏅€氳拷韪Щ鍔?
         const angle = Utils.angle(this.x, this.y, player.x, player.y);
         this.x += Math.cos(angle) * this.speed * deltaTime * 60;
         this.y += Math.sin(angle) * this.speed * deltaTime * 60;
 
-        // 接触伤害
+        // 鎺ヨЕ浼ゅ
         if (Utils.circleCollision(this.x, this.y, this.size, player.x, player.y, player.size)) {
             player.takeDamage(this.damage * deltaTime * 2);
         }
 
-        // 技能冷却
+        // 鎶€鑳藉喎鍗?
         this.chargeTimer -= deltaTime;
         this.aoeTimer -= deltaTime;
 
-        // 释放技能
+        // 閲婃斁鎶€鑳?
         if (this.chargeTimer <= 0) {
             this.startCharge(player);
         } else if (this.aoeTimer <= 0) {
@@ -283,43 +283,23 @@ class Boss {
     }
 
     /**
-     * 绘制Boss
+     * 缁樺埗Boss
      */
-    draw(ctx, cameraX, cameraY) {
-        if (!this.active) return;
-
-        const screenX = this.x - cameraX;
-        const screenY = this.y - cameraY;
-
-        // 出现警告闪烁
-        if (this.spawnWarning) {
-            const alpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = this.color;
-            ctx.shadowBlur = 50;
-            ctx.shadowColor = this.glowColor;
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, this.size * 1.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            return;
-        }
 
         ctx.save();
 
-        // 红色光圈（脉动）
+        // 绾㈣壊鍏夊湀锛堣剦鍔級
         const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.1;
         ctx.shadowBlur = 30;
         ctx.shadowColor = this.glowColor;
 
-        // 受击闪白
+        // 鍙楀嚮闂櫧
         let fillColor = this.color;
         if (this.hitFlash > 0) {
             fillColor = '#ffffff';
         }
 
-        // Boss主体 - 复杂多边形
+        // Boss涓讳綋 - 澶嶆潅澶氳竟褰?
         ctx.fillStyle = fillColor;
         ctx.beginPath();
         const points = 8;
@@ -334,14 +314,14 @@ class Boss {
         ctx.closePath();
         ctx.fill();
 
-        // 内部核心
+        // 鍐呴儴鏍稿績
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.size * 0.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // 眼睛
+        // 鐪肩潧
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(screenX - 10, screenY - 5, 6, 0, Math.PI * 2);
@@ -353,7 +333,7 @@ class Boss {
         ctx.arc(screenX + 10, screenY - 5, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // 冲撞前摇警告效果
+        // 鍐叉挒鍓嶆憞璀﹀憡鏁堟灉
         if (this.isWindup) {
             ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
             ctx.lineWidth = 3;
@@ -370,7 +350,7 @@ class Boss {
 
         ctx.restore();
 
-        // AOE警告圈
+        // AOE璀﹀憡鍦?
         if (this.isAoeWarning) {
             const aoeScreenX = this.aoeX - cameraX;
             const aoeScreenY = this.aoeY - cameraY;
@@ -384,7 +364,7 @@ class Boss {
             ctx.arc(aoeScreenX, aoeScreenY, this.aoeRadius * (0.5 + warningProgress * 0.5), 0, Math.PI * 2);
             ctx.stroke();
 
-            // 内部填充
+            // 鍐呴儴濉厖
             ctx.fillStyle = `rgba(255, 100, 100, ${0.1 + warningProgress * 0.2})`;
             ctx.fill();
             ctx.setLineDash([]);
@@ -393,7 +373,7 @@ class Boss {
     }
 
     /**
-     * 绘制Boss血条（顶部专用）
+     * 缁樺埗Boss琛€鏉★紙椤堕儴涓撶敤锛?
      */
     drawHealthBar(ctx, canvasWidth) {
         if (!this.active || this.spawnWarning) return;
@@ -405,15 +385,15 @@ class Boss {
 
         ctx.save();
 
-        // 背景
+        // 鑳屾櫙
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-        // 血条背景
+        // 琛€鏉¤儗鏅?
         ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
         ctx.fillRect(barX, barY, barWidth, barHeight);
 
-        // 血量
+        // 琛€閲?
         const hpPercent = this.hp / this.maxHp;
         const gradient = ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
         gradient.addColorStop(0, '#ff4757');
@@ -421,12 +401,12 @@ class Boss {
         ctx.fillStyle = gradient;
         ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
 
-        // 边框
+        // 杈规
         ctx.strokeStyle = '#ff4757';
         ctx.lineWidth = 2;
         ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-        // 文字
+        // 鏂囧瓧
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';

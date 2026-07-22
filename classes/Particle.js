@@ -1,11 +1,11 @@
-/**
+﻿/**
  * ============================================================
- *  Particle.js - 粒子系统
+ *  Particle.js - 绮掑瓙绯荤粺
  * ============================================================
- *  统一管理所有粒子特效：尾焰、爆炸、命中、残影等
- *  使用对象池复用粒子，避免频繁GC
- *  TODO: 可以按类型分层渲染，优化绘制顺序
- *  TODO: 可以加入粒子纹理，提升视觉效果
+ *  缁熶竴绠＄悊鎵€鏈夌矑瀛愮壒鏁堬細灏剧劙銆佺垎鐐搞€佸懡涓€佹畫褰辩瓑
+ *  浣跨敤瀵硅薄姹犲鐢ㄧ矑瀛愶紝閬垮厤棰戠箒GC
+ *  TODO: 鍙互鎸夌被鍨嬪垎灞傛覆鏌擄紝浼樺寲缁樺埗椤哄簭
+ *  TODO: 鍙互鍔犲叆绮掑瓙绾圭悊锛屾彁鍗囪瑙夋晥鏋?
  * ============================================================
  */
 
@@ -28,7 +28,7 @@ class Particle {
     }
 
     /**
-     * 初始化粒子（对象池复用）
+     * 鍒濆鍖栫矑瀛愶紙瀵硅薄姹犲鐢級
      */
     init(x, y, vx, vy, options = {}) {
         this.active = true;
@@ -56,43 +56,30 @@ class Particle {
             return;
         }
 
-        // 生命百分比
+        // 鐢熷懡鐧惧垎姣?
         const t = this.life / this.maxLife;
         this.alpha = t;
 
-        // 速度更新
+        // 閫熷害鏇存柊
         this.vy += this.gravity * deltaTime;
         this.vx *= this.friction;
         this.vy *= this.friction;
 
-        // 位置更新
+        // 浣嶇疆鏇存柊
         this.x += this.vx * deltaTime * 60;
         this.y += this.vy * deltaTime * 60;
 
-        // 残影类型不移动，只淡出
+        // 娈嬪奖绫诲瀷涓嶇Щ鍔紝鍙贰鍑?
         if (this.type === 'afterimage') {
             this.alpha = t * 0.5;
         }
     }
 
-    draw(ctx, cameraX, cameraY) {
-        if (!this.active) return;
-
-        const screenX = this.x - cameraX;
-        const screenY = this.y - cameraY;
-
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
-
-        if (this.glow) {
-            ctx.shadowBlur = this.size * 2;
-            ctx.shadowColor = this.color;
-        }
 
         ctx.fillStyle = this.color;
 
         if (this.type === 'afterimage') {
-            // 残影画成圆环
+            // 娈嬪奖鐢绘垚鍦嗙幆
             ctx.beginPath();
             ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
             ctx.strokeStyle = this.color;
@@ -109,7 +96,7 @@ class Particle {
 }
 
 /**
- * 粒子管理器 - 对象池模式
+ * 绮掑瓙绠＄悊鍣?- 瀵硅薄姹犳ā寮?
  */
 class ParticleManager extends ObjectPool {
     constructor(maxCount = 500) {
@@ -117,7 +104,7 @@ class ParticleManager extends ObjectPool {
     }
 
     /**
-     * 生成尾焰粒子
+     * 鐢熸垚灏剧劙绮掑瓙
      */
     spawnTrail(x, y, angle, color) {
         const p = this.acquire();
@@ -139,7 +126,7 @@ class ParticleManager extends ObjectPool {
     }
 
     /**
-     * 生成爆炸粒子
+     * 鐢熸垚鐖嗙偢绮掑瓙
      */
     spawnExplosion(x, y, color, count = 15) {
         for (let i = 0; i < count; i++) {
@@ -162,7 +149,7 @@ class ParticleManager extends ObjectPool {
     }
 
     /**
-     * 生成命中粒子
+     * 鐢熸垚鍛戒腑绮掑瓙
      */
     spawnHit(x, y, color, count = 5) {
         for (let i = 0; i < count; i++) {
@@ -185,7 +172,7 @@ class ParticleManager extends ObjectPool {
     }
 
     /**
-     * 生成玩家残影
+     * 鐢熸垚鐜╁娈嬪奖
      */
     spawnAfterimage(x, y, size, color) {
         const p = this.acquire();
@@ -199,7 +186,7 @@ class ParticleManager extends ObjectPool {
     }
 
     /**
-     * 生成经验吸取粒子效果
+     * 鐢熸垚缁忛獙鍚稿彇绮掑瓙鏁堟灉
      */
     spawnExpPickup(x, y, color) {
         const p = this.acquire();
@@ -223,10 +210,6 @@ class ParticleManager extends ObjectPool {
         }
     }
 
-    draw(ctx, cameraX, cameraY) {
-        for (let i = 0; i < this.pool.length; i++) {
-            this.pool[i].draw(ctx, cameraX, cameraY);
-        }
     }
 }
 

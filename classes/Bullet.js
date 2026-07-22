@@ -1,12 +1,12 @@
-/**
+﻿/**
  * ============================================================
- *  Bullet.js - 子弹系统
+ *  Bullet.js - 瀛愬脊绯荤粺
  * ============================================================
- *  自动追踪最近敌人的能量子弹
- *  支持穿透、暴击、多发射击
- *  使用对象池避免频繁创建销毁
- *  TODO: 可以加入不同子弹类型（激光、散弹、导弹等）
- *  TODO: 可以加入子弹弹跳、分裂等特殊效果
+ *  鑷姩杩借釜鏈€杩戞晫浜虹殑鑳介噺瀛愬脊
+ *  鏀寔绌块€忋€佹毚鍑汇€佸鍙戝皠鍑?
+ *  浣跨敤瀵硅薄姹犻伩鍏嶉绻佸垱寤洪攢姣?
+ *  TODO: 鍙互鍔犲叆涓嶅悓瀛愬脊绫诲瀷锛堟縺鍏夈€佹暎寮广€佸寮圭瓑锛?
+ *  TODO: 鍙互鍔犲叆瀛愬脊寮硅烦銆佸垎瑁傜瓑鐗规畩鏁堟灉
  * ============================================================
  */
 
@@ -20,19 +20,19 @@ class Bullet {
         this.speed = 8;
         this.damage = 10;
         this.size = 5;
-        this.pierce = 0;          // 剩余穿透次数
-        this.hitEnemies = [];     // 已经命中过的敌人（防止穿透时重复伤害）
-        this.target = null;       // 追踪目标
-        this.trackingStrength = 0.1; // 追踪强度
+        this.pierce = 0;          // 鍓╀綑绌块€忔鏁?
+        this.hitEnemies = [];     // 宸茬粡鍛戒腑杩囩殑鏁屼汉锛堥槻姝㈢┛閫忔椂閲嶅浼ゅ锛?
+        this.target = null;       // 杩借釜鐩爣
+        this.trackingStrength = 0.1; // 杩借釜寮哄害
         this.trailTimer = 0;
         this.color = Config.COLORS.bullet;
         this.glowColor = Config.COLORS.bulletGlow;
-        this.isCrit = false;      // 本次是否暴击
-        this.life = 3;            // 最大存活时间（防止飞出地图不消失）
+        this.isCrit = false;      // 鏈鏄惁鏆村嚮
+        this.life = 3;            // 鏈€澶у瓨娲绘椂闂达紙闃叉椋炲嚭鍦板浘涓嶆秷澶憋級
     }
 
     /**
-     * 初始化子弹（对象池复用）
+     * 鍒濆鍖栧瓙寮癸紙瀵硅薄姹犲鐢級
      */
     init(x, y, angle, damage, speed, pierce, target = null) {
         this.active = true;
@@ -51,7 +51,7 @@ class Bullet {
     }
 
     /**
-     * 更新子弹
+     * 鏇存柊瀛愬脊
      */
     update(deltaTime, enemies, particleManager) {
         if (!this.active) return;
@@ -62,14 +62,14 @@ class Bullet {
             return;
         }
 
-        // 追踪目标逻辑
+        // 杩借釜鐩爣閫昏緫
         if (this.target && this.target.active) {
             const angleToTarget = Utils.angle(this.x, this.y, this.target.x, this.target.y);
             const currentAngle = Math.atan2(this.vy, this.vx);
 
-            // 平滑转向
+            // 骞虫粦杞悜
             let angleDiff = angleToTarget - currentAngle;
-            // 归一化角度差到 [-PI, PI]
+            // 褰掍竴鍖栬搴﹀樊鍒?[-PI, PI]
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
@@ -79,15 +79,15 @@ class Bullet {
             this.vx = Math.cos(newAngle) * this.speed;
             this.vy = Math.sin(newAngle) * this.speed;
         } else if (!this.target || !this.target.active) {
-            // 目标丢失，尝试找新目标（弱追踪）
-            // TODO: 可以配置是否自动切换目标
+            // 鐩爣涓㈠け锛屽皾璇曟壘鏂扮洰鏍囷紙寮辫拷韪級
+            // TODO: 鍙互閰嶇疆鏄惁鑷姩鍒囨崲鐩爣
         }
 
-        // 移动
+        // 绉诲姩
         this.x += this.vx * deltaTime * 60;
         this.y += this.vy * deltaTime * 60;
 
-        // 拖尾粒子
+        // 鎷栧熬绮掑瓙
         this.trailTimer -= deltaTime;
         if (this.trailTimer <= 0) {
             this.trailTimer = 0.02;
@@ -97,18 +97,18 @@ class Bullet {
     }
 
     /**
-     * 命中敌人处理
-     * @returns {boolean} 是否造成了有效命中
+     * 鍛戒腑鏁屼汉澶勭悊
+     * @returns {boolean} 鏄惁閫犳垚浜嗘湁鏁堝懡涓?
      */
     onHit(enemy, particleManager) {
-        // 已经命中过的不再伤害（穿透用）
+        // 宸茬粡鍛戒腑杩囩殑涓嶅啀浼ゅ锛堢┛閫忕敤锛?
         if (this.hitEnemies.includes(enemy)) return false;
         this.hitEnemies.push(enemy);
 
-        // 命中特效
+        // 鍛戒腑鐗规晥
         particleManager.spawnHit(this.x, this.y, this.color, 4);
 
-        // 穿透处理
+        // 绌块€忓鐞?
         if (this.pierce > 0) {
             this.pierce--;
         } else {
@@ -119,47 +119,12 @@ class Bullet {
     }
 
     /**
-     * 绘制子弹
+     * 缁樺埗瀛愬脊
      */
-    draw(ctx, cameraX, cameraY) {
-        if (!this.active) return;
-
-        const screenX = this.x - cameraX;
-        const screenY = this.y - cameraY;
-
-        ctx.save();
-
-        // 发光效果
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.glowColor;
-
-        // 子弹主体 - 拉长的椭圆
-        const angle = Math.atan2(this.vy, this.vx);
-        ctx.translate(screenX, screenY);
-        ctx.rotate(angle);
-
-        // 外发光
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2);
-        gradient.addColorStop(0, this.color);
-        gradient.addColorStop(0.5, this.glowColor);
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, this.size * 2, this.size * 1.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 核心
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, this.size * 0.8, this.size * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    }
 }
 
 /**
- * 子弹管理器 - 对象池
+ * 瀛愬脊绠＄悊鍣?- 瀵硅薄姹?
  */
 class BulletManager extends ObjectPool {
     constructor(maxBullets = 200) {
@@ -167,7 +132,7 @@ class BulletManager extends ObjectPool {
     }
 
     /**
-     * 发射一颗子弹
+     * 鍙戝皠涓€棰楀瓙寮?
      */
     fire(x, y, angle, damage, speed, pierce, target = null) {
         const bullet = this.acquire();
@@ -183,10 +148,6 @@ class BulletManager extends ObjectPool {
         }
     }
 
-    draw(ctx, cameraX, cameraY) {
-        for (let i = 0; i < this.pool.length; i++) {
-            this.pool[i].draw(ctx, cameraX, cameraY);
-        }
     }
 }
 
