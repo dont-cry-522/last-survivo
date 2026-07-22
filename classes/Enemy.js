@@ -279,6 +279,16 @@ class Enemy {
             ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
         }
 
+        // 精英怪特殊标记
+        if (this.type === 'elite') {
+            ctx.shadowBlur = 15; ctx.shadowColor = 'rgba(0, 210, 211, 0.9)';
+            ctx.strokeStyle = '#00d2d3'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(screenX, screenY, this.size + 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#00d2d3'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('ELITE', screenX, screenY - this.size - EnemyConfig.HP_BAR_OFFSET_Y - 10);
+            ctx.shadowBlur = 0;
+        }
+
         ctx.restore();
     }
 }

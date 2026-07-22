@@ -308,39 +308,60 @@ class Player {
 
         if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer * 20) % 2 === 0) ctx.globalAlpha = 0.5;
 
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = this.glowColor;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.moveTo(this.size, 0);
-        ctx.lineTo(-this.size * 0.7, -this.size * 0.7);
-        ctx.lineTo(-this.size * 0.4, 0);
-        ctx.lineTo(-this.size * 0.7, this.size * 0.7);
-        ctx.closePath();
-        ctx.fill();
+        const s = this.size;
 
+        // 引擎尾焰
+        const flameLen = 12 + Math.sin(Date.now() * 0.05) * 4;
+        const grad = ctx.createLinearGradient(-s * 0.6, 0, -s * 0.6 - flameLen, 0);
+        grad.addColorStop(0, '#00ddff'); grad.addColorStop(0.5, '#0066ff'); grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.25); ctx.lineTo(-s * 0.6 - flameLen, 0); ctx.lineTo(-s * 0.5, s * 0.25); ctx.fill();
+
+        // 引擎光晕
+        ctx.shadowBlur = 15; ctx.shadowColor = '#0066ff';
+        ctx.fillStyle = '#00aaff';
+        ctx.beginPath(); ctx.arc(-s * 0.45, 0, s * 0.22, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+
+        // 主机身
+        const bodyGrad = ctx.createLinearGradient(0, -s * 0.5, 0, s * 0.5);
+        bodyGrad.addColorStop(0, '#0088cc'); bodyGrad.addColorStop(0.5, '#00ccff'); bodyGrad.addColorStop(1, '#006699');
+        ctx.fillStyle = bodyGrad;
+        ctx.shadowBlur = 15; ctx.shadowColor = this.glowColor;
         ctx.beginPath();
-        ctx.moveTo(this.size * 0.6, 0);
-        ctx.lineTo(-this.size * 0.2, -this.size * 0.3);
-        ctx.lineTo(-this.size * 0.2, this.size * 0.3);
+        ctx.moveTo(s * 0.9, 0);
+        ctx.lineTo(-s * 0.4, -s * 0.35);
+        ctx.lineTo(-s * 0.1, 0);
+        ctx.lineTo(-s * 0.4, s * 0.35);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
 
-        ctx.fillStyle = '#ffffff';
+        // 机翼
+        ctx.fillStyle = '#0077aa';
         ctx.beginPath();
-        ctx.arc(this.size * 0.1, 0, this.size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(s * 0.15, -s * 0.15);
+        ctx.lineTo(-s * 0.1, -s * 0.55);
+        ctx.lineTo(-s * 0.25, -s * 0.3);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(s * 0.15, s * 0.15);
+        ctx.lineTo(-s * 0.1, s * 0.55);
+        ctx.lineTo(-s * 0.25, s * 0.3);
+        ctx.closePath(); ctx.fill();
 
+        // 驾驶舱
+        const cockpitGrad = ctx.createRadialGradient(s * 0.25, 0, 0, s * 0.25, 0, s * 0.18);
+        cockpitGrad.addColorStop(0, '#ffffff'); cockpitGrad.addColorStop(1, '#66ddff');
+        ctx.fillStyle = cockpitGrad;
+        ctx.beginPath(); ctx.ellipse(s * 0.25, 0, s * 0.2, s * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+
+        // 护盾
         if (this.shield > 0) {
-            ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.size * 1.5, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)'; ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 15; ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
+            ctx.beginPath(); ctx.arc(0, 0, s * 1.6, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
         }
         ctx.restore();
     }

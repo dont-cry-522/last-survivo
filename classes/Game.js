@@ -294,6 +294,8 @@ class Game {
         this.uiManager.reset();
         this.skillManager.reset();
         this.skillUI.close();
+        this._announced = {};
+        this._announcements = [];
     }
 
     /**
@@ -346,6 +348,14 @@ class Game {
 
         // UI动画始终更新
         this.uiManager.update(this.deltaTime, this.player, this.state);
+
+        // 公告更新
+        if (this._announcements) {
+            for (let i = this._announcements.length - 1; i >= 0; i--) {
+                this._announcements[i].life -= this.deltaTime;
+                if (this._announcements[i].life <= 0) this._announcements.splice(i, 1);
+            }
+        }
 
         // 渲染
         this.render();
@@ -495,14 +505,13 @@ class Game {
      * 生成普通敌人
      */
     spawnEnemy() {
-        const types = ['normal', 'normal', 'normal', 'fast', 'fast', 'tank', 'exploder'];
-        // 随时间增加快速和坦克敌人比例
-        if (this.survivalTime > 60) {
-            types.push('fast', 'tank');
-        }
-        if (this.survivalTime > 120) {
-            types.push('exploder', 'tank');
-        }
+        const types = ['normal'];
+        if (this.survivalTime > 30) types.push('fast');
+        if (this.survivalTime > 60) types.push('tank');
+        if (this.survivalTime > 90) types.push('exploder');
+
+        // 波次公告
+        this._checkWaveAnnounce();
 
         const type = Utils.randomChoice(types);
         const pos = Utils.spawnPositionAround(
@@ -513,10 +522,29 @@ class Game {
         this.enemyManager.spawn(type, pos.x, pos.y, this.hpMultiplier, this.speedMultiplier);
     }
 
+    _checkWaveAnnounce() {
+        if (!this._announced) this._announced = {};
+        if (this.survivalTime > 30 && !this._announced.fast) {
+            this._announced.fast = true; this._announce('快速敌人 出现了！', '#feca57');
+        }
+        if (this.survivalTime > 60 && !this._announced.tank) {
+            this._announced.tank = true; this._announce('坦克敌人 出现了！', '#5f27cd');
+        }
+        if (this.survivalTime > 90 && !this._announced.exploder) {
+            this._announced.exploder = true; this._announce('自爆敌人 出现了！', '#ff9ff3');
+        }
+    }
+
+    _announce(text, color) {
+        if (!this._announcements) this._announcements = [];
+        this._announcements.push({ text, color, life: 3 });
+    }
+
     /**
      * 生成精英怪
      */
     spawnElite() {
+        this._announce('精英敌人 出现了！', '#00d2d3');
         const pos = Utils.spawnPositionAround(
             this.player.x, this.player.y,
             this.canvas.width, this.canvas.height
@@ -531,6 +559,7 @@ class Game {
      */
     spawnBoss() {
         if (this.boss.active) return;
+        this._announce('BOSS 出现了！', '#ee5253');
 
         const pos = Utils.spawnPositionAround(
             this.player.x, this.player.y,
@@ -700,6 +729,18 @@ class Game {
         this.bulletManager.draw(ctx, this.cameraX, this.cameraY);
 
         ctx.restore();
+
+        // 波次公告
+        if (this._announcements) {
+            for (const a of this._announcements) {
+                const alpha = Math.min(1, a.life);
+                ctx.save(); ctx.globalAlpha = alpha;
+                ctx.fillStyle = a.color; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+                ctx.shadowBlur = 10; ctx.shadowColor = a.color;
+                ctx.fillText(a.text, w / 2, h / 2 - 50);
+                ctx.restore();
+            }
+        }
 
         // ===== 屏幕空间UI =====
 
