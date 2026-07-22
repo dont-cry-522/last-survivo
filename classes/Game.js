@@ -390,6 +390,14 @@ class Game {
         // 更新经验球
         const leveledUp = this.experienceManager.update(deltaTime, this.player, this.particleManager);
 
+        // 技能周期效果
+        this.skillManager.update(deltaTime, {
+            player: this.player,
+            enemies: this.enemyManager.getActiveEnemies(),
+            bulletManager: this.bulletManager,
+            particleManager: this.particleManager,
+        });
+
         // 检查升级
         if (leveledUp || this.player.exp >= this.player.expToNext) {
             while (this.player.exp >= this.player.expToNext) {
@@ -538,22 +546,26 @@ class Game {
                     enemy.x, enemy.y, enemy.size
                 )) {
                     if (bullet.onHit(enemy, this.particleManager)) {
-                        // 造成伤害
                         const dead = enemy.takeDamage(bullet.damage,
                             Utils.angle(bullet.x, bullet.y, enemy.x, enemy.y));
 
-                        // 伤害飘字
                         this.uiManager.addDamageNumber(
                             enemy.x, enemy.y - enemy.size,
                             bullet.damage, bullet.isCrit
                         );
 
-                        // 命中音效
                         if (bullet.isCrit) {
                             this.audio.critHit();
                         } else {
                             this.audio.hit();
                         }
+
+                        this.skillManager.trigger(SkillEffectType.ON_HIT, {
+                            bullet, enemy,
+                            enemies: this.enemyManager.pool,
+                            bulletManager: this.bulletManager,
+                            particleManager: this.particleManager,
+                        });
                     }
                     if (!bullet.active) break;
                 }

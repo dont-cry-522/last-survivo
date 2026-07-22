@@ -216,14 +216,30 @@ class SkillConfig {
             synergies: ['spread_shot', 'armor_piercing', 'splitter'],
             evolveCondition: { type: EvolutionCondition.DAMAGE_ELITE, value: 1 },
             tiers: [
-                { desc: '命中后弹向 5m 内另一敌人，弹射 1 次，递减 20%', params: { bounces: 1, range: 5, decay: 0.2 } },
-                { desc: '弹射 3 次，递减 10%', params: { bounces: 3, range: 6, decay: 0.1 } },
+                { desc: '命中后弹向 5m 内另一敌人，弹射 1 次，递减 20%', params: { bounces: 1, range: 250, decay: 0.2 } },
+                { desc: '弹射 3 次，递减 10%', params: { bounces: 3, range: 300, decay: 0.1 } },
             ],
             apply: function(player, sm, params, prevParams) {
-                if (prevParams) {
-                    player._bounce = null;
-                }
-                player._bounce = { bounces: params.bounces, range: params.range, decay: params.decay };
+                sm.registerHandler(SkillEffectType.ON_HIT, 'bounce', function(ctx) {
+                    const inst = sm.getSkill('bounce');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    let source = ctx.enemy;
+                    for (let b = 0; b < p.bounces; b++) {
+                        let nearest = null, nd2 = p.range * p.range;
+                        for (let i = 0; i < ctx.enemies.length; i++) {
+                            const e = ctx.enemies[i];
+                            if (!e.active || e === source) continue;
+                            const d2 = (source.x - e.x) ** 2 + (source.y - e.y) ** 2;
+                            if (d2 < nd2) { nd2 = d2; nearest = e; }
+                        }
+                        if (!nearest) break;
+                        const a = Math.atan2(nearest.y - source.y, nearest.x - source.x);
+                        const dmg = ctx.bullet.damage * (1 - p.decay);
+                        ctx.bulletManager.fire(source.x, source.y, a, dmg, ctx.bullet.speed, 0, nearest);
+                        source = nearest;
+                    }
+                });
             },
         },
         {
@@ -236,14 +252,22 @@ class SkillConfig {
             synergies: ['spread_shot', 'armor_piercing', 'bounce'],
             evolveCondition: { type: EvolutionCondition.DAMAGE_ELITE, value: 1 },
             tiers: [
-                { desc: '命中时向 45° 扇形分裂 2 颗小子弹（50% 伤害）', params: { count: 2, spreadAngle: 0.8, damageMul: 0.5 } },
+                { desc: '命中时向扇形分裂 2 颗小子弹（50% 伤害）', params: { count: 2, spreadAngle: 0.8, damageMul: 0.5 } },
                 { desc: '分裂 4 颗，伤害 60%', params: { count: 4, spreadAngle: 0.8, damageMul: 0.6 } },
             ],
             apply: function(player, sm, params, prevParams) {
-                if (prevParams) {
-                    player._splitter = null;
-                }
-                player._splitter = { count: params.count, spreadAngle: params.spreadAngle, damageMul: params.damageMul };
+                sm.registerHandler(SkillEffectType.ON_HIT, 'splitter', function(ctx) {
+                    const inst = sm.getSkill('splitter');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    const baseAngle = Math.atan2(ctx.bullet.vy, ctx.bullet.vx);
+                    for (let i = 0; i < p.count; i++) {
+                        const spread = p.count > 1 ? (i - (p.count - 1) / 2) * p.spreadAngle / (p.count - 1) : 0;
+                        const a = baseAngle + spread;
+                        const dmg = ctx.bullet.damage * p.damageMul;
+                        ctx.bulletManager.fire(ctx.enemy.x, ctx.enemy.y, a, dmg, ctx.bullet.speed * 0.7, 0, null);
+                    }
+                });
             },
         },
         {
@@ -279,10 +303,40 @@ class SkillConfig {
                 { desc: '4 个炮台，伤害 40%', params: { count: 4, damageMul: 0.4 } },
             ],
             apply: function(player, sm, params, prevParams) {
-                if (prevParams) {
-                    player._turrets = null;
-                }
-                player._turrets = { count: params.count, damageMul: params.damageMul };
+                sm.registerHandler(SkillEffectType.SUMMON, 'rotary_turret', function(dt, ctx) {
+                    const inst = sm.getSkill('rotary_turret');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._turrets) sm.runtimeState._turrets = [];
+                    const turrets = sm.runtimeState._turrets;
+
+                    while (turrets.length < p.count) {
+                        const a = Math.random() * Math.PI * 2;
+                        turrets.push({ angle: a, orbitR: 50, orbitSpeed: 2.5, fireTimer: 0, fireInterval: 0.6 });
+                    }
+                    while (turrets.length > p.count) turrets.pop();
+
+                    for (const t of turrets) {
+                        t.angle += t.orbitSpeed * dt;
+                        const tx = ctx.player.x + Math.cos(t.angle) * t.orbitR;
+                        const ty = ctx.player.y + Math.sin(t.angle) * t.orbitR;
+                        t.fireTimer -= dt;
+                        if (t.fireTimer <= 0) {
+                            t.fireTimer = t.fireInterval;
+                            let nearest = null, nd = 500 * 500;
+                            for (const e of ctx.enemies) {
+                                if (!e.active) continue;
+                                const d2 = (tx - e.x) ** 2 + (ty - e.y) ** 2;
+                                if (d2 < nd) { nd = d2; nearest = e; }
+                            }
+                            if (nearest) {
+                                const a2 = Math.atan2(nearest.y - ty, nearest.x - tx);
+                                const dmg = ctx.player.bulletDamage * p.damageMul;
+                                ctx.bulletManager.fire(tx, ty, a2, dmg, ctx.player.bulletSpeed, ctx.player.pierce, nearest);
+                            }
+                        }
+                    }
+                });
             },
         },
 
@@ -297,10 +351,49 @@ class SkillConfig {
             synergies: ['spread_shot', 'overheat'],
             evolveCondition: null,
             tiers: [
-                { desc: '移动时身后洒落地雷（每秒 3 颗），0.5 秒激活，2m 范围', params: { rate: 3, radius: 2, damageMul: 1.0, armTime: 0.5 } },
+                { desc: '移动时身后洒落地雷（每秒 3 颗），0.5 秒激活，100% 伤害，80 范围', params: { rate: 3, radius: 80, damageMul: 1.0, armTime: 0.5 } },
             ],
             apply: function(player, sm, params, prevParams) {
-                player._mines = { rate: params.rate, radius: params.radius, damageMul: params.damageMul, armTime: params.armTime };
+                sm.registerHandler(SkillEffectType.PERIODIC, 'terminator_barrage', function(dt, ctx) {
+                    const inst = sm.getSkill('terminator_barrage');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._mines) sm.runtimeState._mines = { timer: 0, mines: [] };
+                    const state = sm.runtimeState._mines;
+
+                    const moving = ctx.player.keys.w || ctx.player.keys.a || ctx.player.keys.s || ctx.player.keys.d;
+                    if (moving) {
+                        state.timer -= dt;
+                        if (state.timer <= 0) {
+                            state.timer = 1 / p.rate;
+                            state.mines.push({
+                                x: ctx.player.x, y: ctx.player.y,
+                                timer: p.armTime, armed: false, life: 8,
+                                radius: p.radius, damage: ctx.player.bulletDamage * p.damageMul,
+                            });
+                        }
+                    }
+
+                    for (let i = state.mines.length - 1; i >= 0; i--) {
+                        const m = state.mines[i];
+                        if (!m.armed) { m.timer -= dt; if (m.timer <= 0) m.armed = true; continue; }
+                        m.life -= dt;
+                        if (m.life <= 0) { state.mines.splice(i, 1); continue; }
+                        let exploded = false;
+                        for (const e of ctx.enemies) {
+                            if (!e.active) continue;
+                            if ((m.x - e.x) ** 2 + (m.y - e.y) ** 2 < m.radius * m.radius) {
+                                e.takeDamage(m.damage);
+                                exploded = true;
+                                break;
+                            }
+                        }
+                        if (exploded) {
+                            ctx.particleManager.spawnExplosion(m.x, m.y, '#ffd700', 10);
+                            state.mines.splice(i, 1);
+                        }
+                    }
+                });
             },
         },
     ];

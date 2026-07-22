@@ -16,23 +16,20 @@
 
 class SkillManager {
     constructor() {
-        /** @type {SkillInstance[]} */
         this.skills = [];
-
-        /**
-         * 效果注册表
-         * { 'projectile_modifier': [SkillInstance, ...], 'on_kill': [...], ... }
-         */
         this.effectRegistry = {};
-
-        /** 当前激活的联动 */
         this.activeSynergies = [];
-
-        /** 每局可刷新升级选项的次数 */
         this.rerollsRemaining = 1;
-
-        /** 上次展示的选项（用于检测复选） */
         this.lastChoices = [];
+
+        /** 效果处理器: { effectType: { skillId: callback } } */
+        this.handlers = {};
+
+        /** 运行时状态（召唤物、计时器等） */
+        this.runtimeState = {};
+
+        /** 激活的 Buff 列表（供 UI 显示） */
+        this.activeBuffs = [];
     }
 
     // ================================================================
@@ -174,9 +171,7 @@ class SkillManager {
         this._updateRegistry(instance);
 
         if (def.apply && player) {
-            console.log('[PRE]', def.name, 'bc:', player.bulletCount, 'bd:', player.bulletDamage, 'sa:', player._spreadAngle);
             def.apply(player, this, instance.getCurrentEffect().params);
-            console.log('[POST]', def.name, 'bc:', player.bulletCount, 'bd:', player.bulletDamage, 'sa:', player._spreadAngle);
         }
 
         this._checkSynergies();
@@ -305,6 +300,123 @@ class SkillManager {
             summary[s.category].count++;
         }
         return summary;
+    }
+
+    // ================================================================
+    //  效果触发系统
+    // ================================================================
+
+    /**
+     * 注册技能效果处理器（由 apply 函数调用）
+     * @param {string} effectType - SkillEffectType
+     * @param {string} skillId
+     * @param {Function} handler - 回调函数，接收 context 参数
+     */
+    registerHandler(effectType, skillId, handler) {
+        if (!this.handlers[effectType]) this.handlers[effectType] = {};
+        this.handlers[effectType][skillId] = handler;
+    }
+
+    /**
+     * 触发指定类型的所有已注册效果
+     * @param {string} effectType
+     * @param {Object} context - 传递给每个 handler 的数据
+     */
+    trigger(effectType, context) {
+        const handlers = this.handlers[effectType] || {};
+        for (const skillId in handlers) {
+            const inst = this._findOwned(skillId);
+            if (!inst) continue;
+            handlers[skillId](context, inst);
+        }
+    }
+
+    /**
+     * 每帧更新（处理 PERIODIC / SUMMON 效果）
+     * @param {number} deltaTime
+     * @param {Object} gameContext - { player, enemies, bulletManager, particleManager }
+     */
+    update(deltaTime, gameContext) {
+        // PERIODIC 效果
+        const periodics = this.effectRegistry[SkillEffectType.PERIODIC] || [];
+        for (const inst of periodics) {
+            const handler = this.handlers[SkillEffectType.PERIODIC]?.[inst.id];
+            if (handler) handler(deltaTime, gameContext, inst);
+        }
+
+        // SUMMON 效果
+        const summons = this.effectRegistry[SkillEffectType.SUMMON] || [];
+        for (const inst of summons) {
+            const handler = this.handlers[SkillEffectType.SUMMON]?.[inst.id];
+            if (handler) handler(deltaTime, gameContext, inst);
+        }
+    }
+
+    // ================================================================
+    //  Buff 显示
+    // ================================================================
+
+    /**
+     * 获取当前激活的 Buff 列表（供 UI 渲染）
+     * @returns {Array<{id, name, tier, category, rarity}>}
+     */
+    getActiveBuffs() {
+        return this.skills.map(s => ({
+            id: s.id,
+            name: s.name,
+            tier: s.currentTier,
+            category: s.category,
+            rarity: s.rarity,
+        }));
+    }
+
+    // ================================================================
+    //  存档接口（预留）
+    // ================================================================
+
+    serialize() {
+        return {
+            skills: this.skills.map(s => ({
+                id: s.id, currentTier: s.currentTier,
+                killCount: s.killCount, hasDamagedElite: s.hasDamagedElite,
+            })),
+            rerollsRemaining: this.rerollsRemaining,
+        };
+    }
+
+    deserialize(data) {
+        this.reset();
+        if (!data || !data.skills) return;
+        for (const saved of data.skills) {
+            const def = SkillConfig.POOL.find(d => d.id === saved.id);
+            if (!def) continue;
+            const inst = new SkillInstance(def);
+            inst.currentTier = saved.currentTier;
+            inst.killCount = saved.killCount || 0;
+            inst.hasDamagedElite = saved.hasDamagedElite || false;
+            inst.isMaxed = inst.currentTier >= inst.maxTier;
+            this.skills.push(inst);
+            this._updateRegistry(inst);
+            if (def.apply) {
+                def.apply(null, this, inst.getCurrentEffect().params);
+            }
+        }
+        this.rerollsRemaining = data.rerollsRemaining || 1;
+        this._checkSynergies();
+    }
+
+    /**
+     * 重置
+     */
+    reset() {
+        this.skills = [];
+        this.effectRegistry = {};
+        this.activeSynergies = [];
+        this.rerollsRemaining = 1;
+        this.lastChoices = [];
+        this.handlers = {};
+        this.runtimeState = {};
+        this.activeBuffs = [];
     }
 }
 
