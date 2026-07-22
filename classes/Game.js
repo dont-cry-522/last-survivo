@@ -690,6 +690,9 @@ class Game {
             this.boss.draw(ctx, this.cameraX, this.cameraY);
         }
 
+        // 技能视觉效果
+        this.skillManager.drawVisuals(ctx, this.cameraX, this.cameraY, this.player);
+
         // 绘制玩家
         this.player.draw(ctx, this.cameraX, this.cameraY);
 
