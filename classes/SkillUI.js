@@ -109,6 +109,18 @@ class SkillUI {
         const startX = (canvasWidth - totalWidth) / 2;
         const startY = (canvasHeight - this.cardHeight) / 2;
 
+        // Reroll button
+        if (this.skillManager && this.skillManager.rerollsRemaining > 0) {
+            const btnW = 120, btnH = 30;
+            const btnX = canvasWidth / 2 - btnW / 2;
+            const btnY = startY + this.cardHeight + 20;
+            if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
+                const newChoices = this.skillManager.reroll();
+                if (newChoices) this.open(newChoices);
+                return null;
+            }
+        }
+
         for (let i = 0; i < this.choices.length; i++) {
             const cx = startX + i * (this.cardWidth + this.cardGap);
             if (mouseX >= cx && mouseX <= cx + this.cardWidth &&
