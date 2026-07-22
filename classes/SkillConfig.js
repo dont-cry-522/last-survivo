@@ -396,7 +396,311 @@ class SkillConfig {
                 });
             },
         },
+
+        // ==============================================================
+        //  火焰流 Inferno
+        // ==============================================================
+
+        {
+            id: 'spark',
+            name: '火种',
+            rarity: SkillRarity.COMMON,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.ON_HIT,
+            description: '子弹几率点燃敌人',
+            synergies: ['incendiary', 'scorched_earth'],
+            evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
+            tiers: [
+                { desc: '30% 概率附加灼烧（3 层，每秒 20% 伤害，持续 2 秒）', params: { chance: 0.3, stacks: 3, dps: 0.2, duration: 2 } },
+                { desc: '50% 概率，灼烧 5 层', params: { chance: 0.5, stacks: 5, dps: 0.25, duration: 3 } },
+                { desc: '100% 概率，灼烧 8 层，每秒 30% 伤害', params: { chance: 1.0, stacks: 8, dps: 0.3, duration: 3 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.ON_HIT, 'spark', function(ctx) {
+                    const inst = sm.getSkill('spark');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (Math.random() < p.chance) {
+                        ctx.enemy.burnStacks = Math.min(p.stacks, (ctx.enemy.burnStacks || 0) + 1);
+                        ctx.enemy.burnDmgPerStack = player.bulletDamage * p.dps;
+                        ctx.enemy.burnTimer = p.duration;
+                    }
+                });
+            },
+        },
+        {
+            id: 'incendiary',
+            name: '灼烧弹',
+            rarity: SkillRarity.COMMON,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.ON_HIT,
+            description: '每颗子弹必定灼烧',
+            synergies: ['spark', 'chain_burn'],
+            evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
+            tiers: [
+                { desc: '每次命中叠加 1 层灼烧（上限 5，每秒 25% 伤害，3 秒）', params: { stacks: 1, maxStacks: 5, dps: 0.25, duration: 3 } },
+                { desc: '上限 8 层，每秒 30%', params: { stacks: 1, maxStacks: 8, dps: 0.3, duration: 4 } },
+                { desc: '上限 12 层，每秒 35%', params: { stacks: 1, maxStacks: 12, dps: 0.35, duration: 4 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.ON_HIT, 'incendiary', function(ctx) {
+                    const inst = sm.getSkill('incendiary');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    const cur = ctx.enemy.burnStacks || 0;
+                    ctx.enemy.burnStacks = Math.min(p.maxStacks, cur + p.stacks);
+                    ctx.enemy.burnDmgPerStack = player.bulletDamage * p.dps;
+                    ctx.enemy.burnTimer = p.duration;
+                });
+            },
+        },
+        {
+            id: 'scorched_earth',
+            name: '燃烧地面',
+            rarity: SkillRarity.RARE,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.ON_CRIT,
+            description: '暴击留下火焰区域',
+            synergies: ['spark', 'hellfire'],
+            evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 50 },
+            tiers: [
+                { desc: '暴击时在命中位置生成火焰区域（120 范围，持续 4 秒，每秒 30% 伤害）', params: { radius: 120, duration: 4, dps: 0.3 } },
+                { desc: '范围 180，持续 6 秒，40% 伤害', params: { radius: 180, duration: 6, dps: 0.4 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.ON_CRIT, 'scorched_earth', function(ctx) {
+                    const inst = sm.getSkill('scorched_earth');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._fireZones) sm.runtimeState._fireZones = [];
+                    sm.runtimeState._fireZones.push({
+                        x: ctx.enemy.x, y: ctx.enemy.y,
+                        radius: p.radius, life: p.duration,
+                        dps: player.bulletDamage * p.dps,
+                    });
+                });
+            },
+        },
+        {
+            id: 'chain_burn',
+            name: '连锁灼烧',
+            rarity: SkillRarity.RARE,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.PERIODIC,
+            description: '灼烧敌人向附近传播',
+            synergies: ['incendiary', 'firestorm'],
+            evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 40 },
+            tiers: [
+                { desc: '每 2 秒，灼烧敌人向 150 范围内敌人传播 1 层灼烧', params: { interval: 2, range: 150, spreadStacks: 1 } },
+                { desc: '每 1 秒，范围 200，传播 2 层', params: { interval: 1, range: 200, spreadStacks: 2 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.PERIODIC, 'chain_burn', function(dt, ctx) {
+                    const inst = sm.getSkill('chain_burn');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._burnSpread) sm.runtimeState._burnSpread = { timer: 0 };
+                    const bs = sm.runtimeState._burnSpread;
+                    bs.timer -= dt;
+                    if (bs.timer > 0) return;
+                    bs.timer = p.interval;
+                    for (const e of ctx.enemies) {
+                        if (!e.active || !e.burnStacks) continue;
+                        for (const t of ctx.enemies) {
+                            if (!t.active || t === e || t.burnStacks) continue;
+                            const d2 = (e.x - t.x) ** 2 + (e.y - t.y) ** 2;
+                            if (d2 < p.range * p.range) {
+                                t.burnStacks = p.spreadStacks;
+                                t.burnDmgPerStack = e.burnDmgPerStack;
+                                t.burnTimer = 2;
+                                break;
+                            }
+                        }
+                    }
+                });
+            },
+        },
+        {
+            id: 'firestorm',
+            name: '火焰风暴',
+            rarity: SkillRarity.EPIC,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.PERIODIC,
+            description: '定时召唤陨石',
+            synergies: ['chain_burn', 'hellfire'],
+            evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 60 },
+            tiers: [
+                { desc: '每 10 次攻击，砸下陨石（250 范围，500% 伤害 + 灼烧 5 层）', params: { attackCount: 10, radius: 250, dmgMul: 5, burnStacks: 5 } },
+                { desc: '每 7 次，范围 300，600% 伤害', params: { attackCount: 7, radius: 300, dmgMul: 6, burnStacks: 8 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.PERIODIC, 'firestorm', function(dt, ctx) {
+                    const inst = sm.getSkill('firestorm');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    let best = null, bestDensity = 0;
+                    const grid = {};
+                    for (const e of ctx.enemies) {
+                        if (!e.active) continue;
+                        const gx = Math.floor(e.x / 80), gy = Math.floor(e.y / 80);
+                        const key = gx + ',' + gy;
+                        grid[key] = (grid[key] || 0) + 1;
+                        if (grid[key] > bestDensity) { bestDensity = grid[key]; best = { x: gx * 80 + 40, y: gy * 80 + 40 }; }
+                    }
+                    if (!best || !sm.runtimeState._attackCounter) sm.runtimeState._attackCounter = { count: 0 };
+                    sm.runtimeState._attackCounter.count += 1;
+                    if (sm.runtimeState._attackCounter.count >= p.attackCount) {
+                        sm.runtimeState._attackCounter.count = 0;
+                        if (!sm.runtimeState._fireZones) sm.runtimeState._fireZones = [];
+                        sm.runtimeState._fireZones.push({
+                            x: best.x, y: best.y, radius: p.radius, life: 4,
+                            dps: player.bulletDamage * p.dmgMul * 0.25,
+                        });
+                        for (const e of ctx.enemies) {
+                            if (!e.active) continue;
+                            if ((best.x - e.x) ** 2 + (best.y - e.y) ** 2 < p.radius * p.radius) {
+                                e.takeDamage(player.bulletDamage * p.dmgMul);
+                                e.burnStacks = p.burnStacks;
+                                e.burnDmgPerStack = player.bulletDamage * 0.2;
+                                e.burnTimer = 3;
+                            }
+                        }
+                        ctx.particleManager.spawnExplosion(best.x, best.y, '#ff6b00', 30);
+                    }
+                });
+            },
+        },
+        {
+            id: 'hellfire',
+            name: '焦土',
+            rarity: SkillRarity.EPIC,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.STAT_MODIFIER,
+            description: '强化所有火焰区域',
+            synergies: ['scorched_earth', 'firestorm'],
+            evolveCondition: { type: EvolutionCondition.DAMAGE_ELITE, value: 1 },
+            tiers: [
+                { desc: '火焰区域范围 +50%，伤害 +50%，持续时间 +2 秒', params: { radiusMul: 1.5, dpsMul: 1.5, lifeBonus: 2 } },
+                { desc: '范围 +100%，伤害 +100%，持续时间 +4 秒', params: { radiusMul: 2.0, dpsMul: 2.0, lifeBonus: 4 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.runtimeState._hellfire = params;
+            },
+        },
+        {
+            id: 'supernova',
+            name: '超新星',
+            rarity: SkillRarity.LEGENDARY,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.PERIODIC,
+            description: '全屏火焰环清场',
+            synergies: ['firestorm', 'hellfire'],
+            evolveCondition: null,
+            tiers: [
+                { desc: '每 60 秒，火焰环从屏幕边缘收缩到中心，灼烧所有敌人 5 层 + 300% 伤害', params: { cooldown: 60, dmgMul: 3, burnStacks: 5 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.PERIODIC, 'supernova', function(dt, ctx) {
+                    const inst = sm.getSkill('supernova');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._supernova) sm.runtimeState._supernova = { timer: 0 };
+                    sm.runtimeState._supernova.timer -= dt;
+                    if (sm.runtimeState._supernova.timer > 0) return;
+                    sm.runtimeState._supernova.timer = p.cooldown;
+                    for (const e of ctx.enemies) {
+                        if (!e.active) continue;
+                        e.takeDamage(player.bulletDamage * p.dmgMul);
+                        e.burnStacks = p.burnStacks;
+                        e.burnDmgPerStack = player.bulletDamage * 0.3;
+                        e.burnTimer = 5;
+                    }
+                    ctx.particleManager.spawnExplosion(ctx.player.x, ctx.player.y, '#ff4400', 50);
+                });
+            },
+        },
+        {
+            id: 'phoenix',
+            name: '浴火重生',
+            rarity: SkillRarity.EPIC,
+            category: SkillCategory.INFERNO,
+            effectType: SkillEffectType.ON_DAMAGED,
+            description: '致命伤害时复活',
+            synergies: ['supernova', 'hellfire'],
+            evolveCondition: { type: EvolutionCondition.BOSS_KILLED, value: 1 },
+            tiers: [
+                { desc: '受到致命伤害时爆炸（250 范围 500% 伤害），回复 50% HP，冷却 180 秒', params: { radius: 250, dmgMul: 5, healPct: 0.5, cooldown: 180 } },
+                { desc: '回复 75% HP，冷却 120 秒，范围 350', params: { radius: 350, dmgMul: 6, healPct: 0.75, cooldown: 120 } },
+            ],
+            apply: function(player, sm, params, prevParams) {
+                _ensureBurnProcessor(sm);
+                sm.registerHandler(SkillEffectType.ON_DAMAGED, 'phoenix', function(ctx) {
+                    const inst = sm.getSkill('phoenix');
+                    if (!inst) return;
+                    const p = inst.getCurrentEffect().params;
+                    if (!sm.runtimeState._phoenix) sm.runtimeState._phoenix = { onCd: false, timer: 0 };
+                    const px = sm.runtimeState._phoenix;
+                    if (px.onCd) { px.timer -= 0.016; if (px.timer <= 0) px.onCd = false; return; }
+                    if (ctx.player.hp <= 0) {
+                        px.onCd = true;
+                        px.timer = p.cooldown;
+                        ctx.player.hp = Math.floor(ctx.player.maxHp * p.healPct);
+                        const x = ctx.player.x, y = ctx.player.y;
+                        for (const e of ctx.game?.enemyManager?.pool || []) {
+                            if (!e.active) continue;
+                            if ((x - e.x) ** 2 + (y - e.y) ** 2 < p.radius * p.radius) {
+                                e.takeDamage(ctx.player.bulletDamage * p.dmgMul);
+                            }
+                        }
+                    }
+                });
+            },
+        },
     ];
+}
+
+// 共享辅助：确保燃烧处理器已注册
+function _ensureBurnProcessor(sm) {
+    if (sm.runtimeState._burnProcessorReady) return;
+    sm.runtimeState._burnProcessorReady = true;
+    sm.registerHandler(SkillEffectType.PERIODIC, '__burn__', function(dt, ctx) {
+        const hellfire = sm.runtimeState._hellfire;
+        // 处理敌人灼烧伤害
+        for (const e of ctx.enemies) {
+            if (!e.active || !e.burnStacks) continue;
+            const dps = e.burnDmgPerStack * e.burnStacks;
+            e.takeDamage(dps * dt);
+        }
+        // 处理火焰区域
+        const zones = sm.runtimeState._fireZones;
+        if (zones && zones.length > 0) {
+            for (let i = zones.length - 1; i >= 0; i--) {
+                const z = zones[i];
+                z.life -= dt;
+                if (z.life <= 0) { zones.splice(i, 1); continue; }
+                const r = hellfire ? z.radius * hellfire.radiusMul : z.radius;
+                const d = hellfire ? z.dps * hellfire.dpsMul : z.dps;
+                const l = hellfire ? z.life + hellfire.lifeBonus : z.life;
+                for (const e of ctx.enemies) {
+                    if (!e.active) continue;
+                    if ((z.x - e.x) ** 2 + (z.y - e.y) ** 2 < r * r) {
+                        e.takeDamage(d * dt);
+                        e.burnStacks = Math.min(5, (e.burnStacks || 0) + 1);
+                        e.burnDmgPerStack = ctx.player.bulletDamage * 0.15;
+                        e.burnTimer = Math.max(e.burnTimer || 0, 1);
+                    }
+                }
+                if (hellfire) { z.radius = z.radius; z.life = l; z.dps = d; }
+            }
+        }
+    });
 }
 
 if (typeof window !== 'undefined') {

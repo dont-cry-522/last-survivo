@@ -102,6 +102,9 @@ class Game {
         // 创建玩家
         this.player = new Player(0, 0);
         this.player.audio = this.audio;
+        this.player._onDamaged = (amount) => {
+            this.skillManager.trigger(SkillEffectType.ON_DAMAGED, { amount, player: this.player, game: this });
+        };
 
         // 绑定事件
         this.bindEvents();
@@ -564,6 +567,7 @@ class Game {
 
                         if (bullet.isCrit) {
                             this.audio.critHit();
+                            this.skillManager.trigger(SkillEffectType.ON_CRIT, { bullet, enemy, enemies: this.enemyManager.pool, bulletManager: this.bulletManager, particleManager: this.particleManager });
                         } else {
                             this.audio.hit();
                         }

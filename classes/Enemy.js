@@ -39,6 +39,8 @@ class Enemy {
         this.knockbackDecay = EnemyConfig.KNOCKBACK_DECAY;
 
         this.contactCooldown = 0;
+        this.burnStacks = 0;
+        this.burnTimer = 0;
 
         this.hpMultiplier = 1;
         this.speedMultiplier = 1;
@@ -69,6 +71,9 @@ class Enemy {
         this.knockbackY = 0;
         this._triggeredExplode = false;
         this.contactCooldown = 0;
+        this.burnStacks = 0;
+        this.burnTimer = 0;
+        this.burnDmgPerStack = 0;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
@@ -122,6 +127,11 @@ class Enemy {
 
         if (this.contactCooldown > 0) {
             this.contactCooldown -= deltaTime;
+        }
+
+        if (this.burnStacks > 0) {
+            this.burnTimer -= deltaTime;
+            if (this.burnTimer <= 0) { this.burnStacks = 0; this.burnTimer = 0; }
         }
 
         this.knockbackX *= this.knockbackDecay;

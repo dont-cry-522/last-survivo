@@ -129,6 +129,7 @@ class Player {
         this.hp -= amount;
         this.combo = 0;
         if (this.audio) this.audio.playerHit();
+        if (this._onDamaged && amount > 0) this._onDamaged(amount);
         if (this.hp <= 0) { this.hp = 0; return true; }
         return false;
     }
