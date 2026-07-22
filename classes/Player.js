@@ -142,7 +142,7 @@ class Player {
             this.level++;
             this.expToNext = Config.getExpForLevel(this.level);
             this.maxHp += Config.PLAYER.levelHpBonus;
-            this.hp += Config.PLAYER.levelHpBonus;
+            this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.2);
             this.bulletDamage += Config.PLAYER.levelDamageBonus;
             leveledUp = true;
         }

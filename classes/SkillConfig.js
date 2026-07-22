@@ -965,15 +965,15 @@ function _ensureBurnProcessor(sm) {
         // 处理冰霜粒子
         for (const e of ctx.enemies) {
             if (!e.active) continue;
-            if (e.frozen && ctx.particleManager && Math.random() < 0.4) {
+            if (e.frozen && ctx.particleManager && Math.random() < 0.7) {
                 ctx.particleManager.spawnTrail(
-                    e.x + (Math.random() - 0.5) * e.size, e.y + (Math.random() - 0.5) * e.size,
-                    Math.PI / 2 + Math.random() * 0.5, '#aaddff'
+                    e.x + (Math.random() - 0.5) * e.size * 1.5, e.y + (Math.random() - 0.5) * e.size * 1.5,
+                    Math.PI / 2 + Math.random() * 0.5, '#88ddff'
                 );
-            } else if (e.slowAmount > 0 && ctx.particleManager && Math.random() < 0.15) {
+            } else if (e.slowAmount > 0 && ctx.particleManager && Math.random() < 0.3) {
                 ctx.particleManager.spawnHit(
                     e.x + (Math.random() - 0.5) * e.size, e.y + (Math.random() - 0.5) * e.size,
-                    '#ccddff', 1
+                    '#aaddff', 2
                 );
             }
         }
