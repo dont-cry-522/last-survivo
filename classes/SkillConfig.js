@@ -411,9 +411,9 @@ class SkillConfig {
             synergies: ['incendiary', 'scorched_earth'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
             tiers: [
-                { desc: '30% 概率附加灼烧（3 层，每秒 20% 伤害，持续 2 秒）', params: { chance: 0.3, stacks: 3, dps: 0.2, duration: 2 } },
-                { desc: '50% 概率，灼烧 5 层', params: { chance: 0.5, stacks: 5, dps: 0.25, duration: 3 } },
-                { desc: '100% 概率，灼烧 8 层，每秒 30% 伤害', params: { chance: 1.0, stacks: 8, dps: 0.3, duration: 3 } },
+                { desc: '30% 概率附加灼烧（2 层，每秒 10% 伤害，持续 2 秒）', params: { chance: 0.3, stacks: 2, dps: 0.10, duration: 2 } },
+                { desc: '50% 概率，灼烧 3 层，15% 伤害', params: { chance: 0.5, stacks: 3, dps: 0.12, duration: 3 } },
+                { desc: '100% 概率，灼烧 5 层，每秒 18% 伤害', params: { chance: 1.0, stacks: 5, dps: 0.18, duration: 3 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -439,9 +439,9 @@ class SkillConfig {
             synergies: ['spark', 'chain_burn'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
             tiers: [
-                { desc: '每次命中叠加 1 层灼烧（上限 5，每秒 25% 伤害，3 秒）', params: { stacks: 1, maxStacks: 5, dps: 0.25, duration: 3 } },
-                { desc: '上限 8 层，每秒 30%', params: { stacks: 1, maxStacks: 8, dps: 0.3, duration: 4 } },
-                { desc: '上限 12 层，每秒 35%', params: { stacks: 1, maxStacks: 12, dps: 0.35, duration: 4 } },
+                { desc: '每次命中叠加 1 层灼烧（上限 4，每秒 12% 伤害，3 秒）', params: { stacks: 1, maxStacks: 4, dps: 0.12, duration: 3 } },
+                { desc: '上限 6 层，每秒 15%', params: { stacks: 1, maxStacks: 6, dps: 0.15, duration: 4 } },
+                { desc: '上限 8 层，每秒 18%', params: { stacks: 1, maxStacks: 8, dps: 0.18, duration: 4 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -466,8 +466,8 @@ class SkillConfig {
             synergies: ['spark', 'hellfire'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 50 },
             tiers: [
-                { desc: '暴击时在命中位置生成火焰区域（120 范围，持续 4 秒，每秒 30% 伤害）', params: { radius: 120, duration: 4, dps: 0.3 } },
-                { desc: '范围 180，持续 6 秒，40% 伤害', params: { radius: 180, duration: 6, dps: 0.4 } },
+                { desc: '暴击时在命中位置生成火焰区域（100 范围，持续 3 秒，每秒 15% 伤害）', params: { radius: 100, duration: 3, dps: 0.15 } },
+                { desc: '范围 140，持续 4 秒，20% 伤害', params: { radius: 140, duration: 4, dps: 0.20 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -534,8 +534,8 @@ class SkillConfig {
             synergies: ['chain_burn', 'hellfire'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 60 },
             tiers: [
-                { desc: '每 10 次攻击，砸下陨石（250 范围，500% 伤害 + 灼烧 5 层）', params: { attackCount: 10, radius: 250, dmgMul: 5, burnStacks: 5 } },
-                { desc: '每 7 次，范围 300，600% 伤害', params: { attackCount: 7, radius: 300, dmgMul: 6, burnStacks: 8 } },
+                { desc: '每 10 次攻击，砸下陨石（200 范围，300% 伤害 + 灼烧 3 层）', params: { attackCount: 10, radius: 200, dmgMul: 3, burnStacks: 3 } },
+                { desc: '每 7 次，范围 250，400% 伤害', params: { attackCount: 7, radius: 250, dmgMul: 4, burnStacks: 5 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -559,7 +559,7 @@ class SkillConfig {
                         if (!sm.runtimeState._fireZones) sm.runtimeState._fireZones = [];
                         sm.runtimeState._fireZones.push({
                             x: best.x, y: best.y, radius: p.radius, life: 4,
-                            dps: player.bulletDamage * p.dmgMul * 0.25,
+                            dps: player.bulletDamage * p.dmgMul * 0.15,
                         });
                         for (const e of ctx.enemies) {
                             if (!e.active) continue;
@@ -585,8 +585,8 @@ class SkillConfig {
             synergies: ['scorched_earth', 'firestorm'],
             evolveCondition: { type: EvolutionCondition.DAMAGE_ELITE, value: 1 },
             tiers: [
-                { desc: '火焰区域范围 +50%，伤害 +50%，持续时间 +2 秒', params: { radiusMul: 1.5, dpsMul: 1.5, lifeBonus: 2 } },
-                { desc: '范围 +100%，伤害 +100%，持续时间 +4 秒', params: { radiusMul: 2.0, dpsMul: 2.0, lifeBonus: 4 } },
+                { desc: '火焰区域范围 +30%，伤害 +30%，持续时间 +1 秒', params: { radiusMul: 1.3, dpsMul: 1.3, lifeBonus: 1 } },
+                { desc: '范围 +60%，伤害 +60%，持续时间 +2 秒', params: { radiusMul: 1.6, dpsMul: 1.6, lifeBonus: 2 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -603,7 +603,7 @@ class SkillConfig {
             synergies: ['firestorm', 'hellfire'],
             evolveCondition: null,
             tiers: [
-                { desc: '每 60 秒，火焰环从屏幕边缘收缩到中心，灼烧所有敌人 5 层 + 300% 伤害', params: { cooldown: 60, dmgMul: 3, burnStacks: 5 } },
+                { desc: '每 60 秒，火焰环从屏幕边缘收缩到中心，灼烧所有敌人 3 层 + 200% 伤害', params: { cooldown: 60, dmgMul: 2, burnStacks: 3 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -636,8 +636,8 @@ class SkillConfig {
             synergies: ['supernova', 'hellfire'],
             evolveCondition: { type: EvolutionCondition.BOSS_KILLED, value: 1 },
             tiers: [
-                { desc: '受到致命伤害时爆炸（250 范围 500% 伤害），回复 50% HP，冷却 180 秒', params: { radius: 250, dmgMul: 5, healPct: 0.5, cooldown: 180 } },
-                { desc: '回复 75% HP，冷却 120 秒，范围 350', params: { radius: 350, dmgMul: 6, healPct: 0.75, cooldown: 120 } },
+                { desc: '受到致命伤害时爆炸（200 范围 300% 伤害），回复 40% HP，冷却 240 秒', params: { radius: 200, dmgMul: 3, healPct: 0.4, cooldown: 240 } },
+                { desc: '回复 60% HP，冷却 180 秒，范围 250', params: { radius: 250, dmgMul: 4, healPct: 0.6, cooldown: 180 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -693,7 +693,7 @@ function _ensureBurnProcessor(sm) {
                     if ((z.x - e.x) ** 2 + (z.y - e.y) ** 2 < r * r) {
                         e.takeDamage(d * dt);
                         e.burnStacks = Math.min(5, (e.burnStacks || 0) + 1);
-                        e.burnDmgPerStack = ctx.player.bulletDamage * 0.15;
+                        e.burnDmgPerStack = ctx.player.bulletDamage * 0.10;
                         e.burnTimer = Math.max(e.burnTimer || 0, 1);
                     }
                 }
