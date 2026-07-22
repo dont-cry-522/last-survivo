@@ -195,9 +195,7 @@ class Game {
      * 按键抬起
      */
     onKeyUp(key) {
-        if (this.state === 'playing') {
-            this.player.onKeyUp(key);
-        }
+        this.player.onKeyUp(key);
     }
 
     /**
@@ -584,6 +582,7 @@ class Game {
      */
     triggerUpgrade() {
         this.state = 'upgrading';
+        this.player.keys.w = this.player.keys.a = this.player.keys.s = this.player.keys.d = this.player.keys.shift = false;
         const choices = this.skillManager.generateChoices(4);
         this.skillUI.open(choices);
     }

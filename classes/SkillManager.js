@@ -174,8 +174,9 @@ class SkillManager {
         this._updateRegistry(instance);
 
         if (def.apply && player) {
+            console.log('[PRE]', def.name, 'bc:', player.bulletCount, 'bd:', player.bulletDamage, 'sa:', player._spreadAngle);
             def.apply(player, this, instance.getCurrentEffect().params);
-            console.log('[Skill]', def.name, 'applied, bulletCount:', player.bulletCount, 'bulletDamage:', player.bulletDamage);
+            console.log('[POST]', def.name, 'bc:', player.bulletCount, 'bd:', player.bulletDamage, 'sa:', player._spreadAngle);
         }
 
         this._checkSynergies();
