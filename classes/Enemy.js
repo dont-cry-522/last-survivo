@@ -38,6 +38,8 @@ class Enemy {
         this.knockbackY = 0;
         this.knockbackDecay = EnemyConfig.KNOCKBACK_DECAY;
 
+        this.contactCooldown = 0;
+
         this.hpMultiplier = 1;
         this.speedMultiplier = 1;
     }
@@ -66,6 +68,7 @@ class Enemy {
         this.knockbackX = 0;
         this.knockbackY = 0;
         this._triggeredExplode = false;
+        this.contactCooldown = 0;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
@@ -115,6 +118,10 @@ class Enemy {
 
         if (this.hitFlash > 0) {
             this.hitFlash -= deltaTime;
+        }
+
+        if (this.contactCooldown > 0) {
+            this.contactCooldown -= deltaTime;
         }
 
         this.knockbackX *= this.knockbackDecay;
@@ -287,8 +294,9 @@ class EnemyManager extends ObjectPool {
                 continue;
             }
 
-            if (!e.isExploder && Utils.circleCollision(e.x, e.y, e.size, player.x, player.y, player.size)) {
-                player.takeDamage(e.damage * deltaTime * EnemyConfig.CONTACT_DAMAGE_MULTIPLIER);
+            if (!e.isExploder && e.contactCooldown <= 0 && Utils.circleCollision(e.x, e.y, e.size, player.x, player.y, player.size)) {
+                player.takeDamage(e.damage);
+                e.contactCooldown = EnemyConfig.CONTACT_DAMAGE_COOLDOWN;
             }
         }
     }

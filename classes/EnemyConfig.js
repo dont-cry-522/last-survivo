@@ -81,6 +81,9 @@ class EnemyConfig {
     /** 接触伤害倍率：damage * dt * MULTIPLIER */
     static CONTACT_DAMAGE_MULTIPLIER = 2;
 
+    /** 同一敌人的接触伤害冷却（秒） */
+    static CONTACT_DAMAGE_COOLDOWN = 1.5;
+
     /** 击退衰减系数 */
     static KNOCKBACK_DECAY = 0.9;
 
