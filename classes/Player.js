@@ -225,12 +225,24 @@ class Player {
                 }
                 let isCrit = Math.random() < this.critRate;
                 let baseDmg = this.bulletDamage;
+                // 弱点洞悉：低血量必暴
+                const w = window.game?.skillManager?.runtimeState?._weakness;
+                if (w && target && target.active && target.hp / target.maxHp <= w.threshold) {
+                    isCrit = true;
+                    baseDmg *= (1 + (w.critDmgBonus || 0));
+                }
+                // 鲜血狂怒 + 灵魂收割暴伤
+                const frenzy = window.game?.skillManager?.runtimeState?._frenzy;
+                const frenzyBonus = (frenzy && frenzy.timer > 0) ? frenzy.stacks * (window.game?.skillManager?.getSkill('blood_frenzy')?.getCurrentEffect()?.params?.perStack || 0) : 0;
+                const soulBonus = (window.game?.skillManager?.runtimeState?._souls || 0) * (window.game?.skillManager?.getSkill('soul_harvest')?.getCurrentEffect()?.params?.perStack || 0);
+                // 闪现暴伤
                 if (this._blinkCrit && this._blinkCrit.timer > 0) {
                     isCrit = true;
                     baseDmg *= (1 + (this._blinkCrit.bonus || 0));
                 }
                 const voidBonus = (window.game?.skillManager?.runtimeState?._voidStacks || 0) * (window.game?.skillManager?.getSkill('void_walker')?.getCurrentEffect()?.params?.perStack || 0);
-                const damage = (isCrit ? baseDmg * this.critDamage : baseDmg) * (1 + voidBonus);
+                const critDmg = this.critDamage * (1 + frenzyBonus + soulBonus);
+                const damage = (isCrit ? baseDmg * critDmg : baseDmg) * (1 + voidBonus);
                 const bullet = bulletManager.fire(this.x, this.y, angle, damage, this.bulletSpeed, this.pierce, target);
                 if (bullet) bullet.isCrit = isCrit;
             }
