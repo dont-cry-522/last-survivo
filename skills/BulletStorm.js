@@ -226,6 +226,17 @@ class BulletStormSkills {
                 { desc: '移动时身后洒落地雷（每秒 3 颗），0.5 秒激活，100% 伤害，150 范围', params: { rate: 3, radius: 150, damageMul: 1.0, armTime: 0.5 } },
             ],
             apply: function(player, sm, params, prevParams) {
+                sm.registerDraw("mines", function(ctx,cx,cy,p) {
+                    const mines = sm.runtimeState._mines?.mines; if(!mines)return;
+                    for(const m of mines) {
+                        const mx=m.x-cx, my=m.y-cy, alpha=m.armed?0.8:0.3;
+                        ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=m.armed?"#ff4400":"#ffaa00";
+                        ctx.shadowBlur=m.armed?8:3;ctx.shadowColor="#ff4400";
+                        ctx.beginPath();ctx.arc(mx,my,6,0,Math.PI*2);ctx.fill();
+                        if(m.armed){ctx.fillStyle="#ffffff";ctx.beginPath();ctx.arc(mx,my,2,0,Math.PI*2);ctx.fill();}
+                        ctx.restore();
+                    }
+                });
                 sm.registerHandler(SkillEffectType.PERIODIC, 'terminator_barrage', function(dt, ctx) {
                     const inst = sm.getSkill('terminator_barrage');
                     if (!inst) return;
@@ -264,6 +275,16 @@ class BulletStormSkills {
                             ctx.particleManager.spawnExplosion(m.x, m.y, '#ffd700', 10);
                             state.mines.splice(i, 1);
                         }
+                    }
+                });
+                sm.registerDraw("turrets", function(ctx,cx,cy,p) {
+                    const turrets = sm.runtimeState._turrets; if(!turrets)return;
+                    for(const t of turrets) {
+                        const tx = p.x+Math.cos(t.angle)*t.orbitR-cx, ty = p.y+Math.sin(t.angle)*t.orbitR-cy;
+                        ctx.save(); ctx.fillStyle="#00aacc"; ctx.shadowBlur=8; ctx.shadowColor="#00ddff";
+                        ctx.beginPath(); ctx.arc(tx,ty,7,0,Math.PI*2); ctx.fill();
+                        ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(tx,ty,3,0,Math.PI*2); ctx.fill();
+                        ctx.restore();
                     }
                 });
             },

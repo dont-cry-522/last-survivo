@@ -201,6 +201,13 @@ class InfernoSkills {
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
+                sm.registerDraw("supernova", function(ctx,cx,cy,p) {
+                    const st=sm.runtimeState._supernova; if(!st||st.timer>2||st.timer<=0)return;
+                    const snap=(2-st.timer)/2;
+                    ctx.save();ctx.globalAlpha=snap*0.6;ctx.strokeStyle="#ff4400";ctx.lineWidth=6;
+                    ctx.shadowBlur=20;ctx.shadowColor="#ff2200";
+                    ctx.beginPath();ctx.arc(p.x-cx,p.y-cy,600*(1-snap),0,Math.PI*2);ctx.stroke();ctx.restore();
+                });
                 sm.registerHandler(SkillEffectType.PERIODIC, 'supernova', function(dt, ctx) {
                     const inst = sm.getSkill('supernova');
                     if (!inst) return;

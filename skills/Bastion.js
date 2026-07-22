@@ -182,6 +182,15 @@ class BastionSkills {
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
+                sm.registerDraw("phantoms", function(ctx,cx,cy,p) {
+                    const ph=sm.runtimeState._phantoms; if(!ph)return;
+                    for(const pp of ph) {
+                        const px=pp.x-cx, py=pp.y-cy, fade=Math.max(0.1,pp.life/4);
+                        ctx.save();ctx.globalAlpha=fade*0.6;ctx.strokeStyle="#88ff88";ctx.lineWidth=2;
+                        ctx.beginPath();ctx.arc(px,py,25,0,Math.PI*2);ctx.stroke();
+                        ctx.fillStyle="#88ff88";ctx.beginPath();ctx.arc(px,py,10,0,Math.PI*2);ctx.fill();ctx.restore();
+                    }
+                });
                 if (!sm.runtimeState._phantoms) sm.runtimeState._phantoms = [];
                 sm.registerHandler(SkillEffectType.ON_DASH, 'counter_stance', function(ctx) {
                     const inst = sm.getSkill('counter_stance');

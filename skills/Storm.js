@@ -97,6 +97,19 @@ class StormSkills {
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
+                sm.registerDraw("stormCloud", function(ctx,cx,cy,p) {
+                    const sc=sm.runtimeState._stormCloud; if(!sc)return;
+                    const x=p.x-cx, y=p.y-cy-40;
+                    ctx.save();ctx.globalAlpha=0.7;ctx.fillStyle="#667799";
+                    ctx.beginPath();ctx.arc(x-12,y+4,14,0,Math.PI*2);ctx.fill();
+                    ctx.beginPath();ctx.arc(x+14,y+2,16,0,Math.PI*2);ctx.fill();
+                    ctx.beginPath();ctx.arc(x+2,y-4,18,0,Math.PI*2);ctx.fill();
+                    ctx.fillStyle="#8899bb";ctx.beginPath();ctx.arc(x+26,y+8,12,0,Math.PI*2);ctx.fill();
+                    ctx.beginPath();ctx.arc(x-20,y+10,10,0,Math.PI*2);ctx.fill();
+                    if(Math.random()<0.2){ctx.strokeStyle="#ffff88";ctx.lineWidth=2;
+                    ctx.beginPath();ctx.moveTo(x,y+18);ctx.lineTo(x+(Math.random()-0.5)*30,p.y-cy+(Math.random()*30));ctx.stroke();}
+                    ctx.restore();
+                });
                 sm.registerHandler(SkillEffectType.PERIODIC, 'storm_cloud', function(dt, ctx) {
                     const inst = sm.getSkill('storm_cloud');
                     if (!inst) return;

@@ -456,12 +456,16 @@ class SkillManager {
         this.activeSynergies = [];
         this.runtimeState = {};
         this.activeBuffs = [];
+        this._drawFns = {};
     }
 
-    /**
-     * 绘制技能视觉效果
-     */
-    drawVisuals(ctx, cameraX, cameraY, player) {
+    registerDraw(name, fn) { this._drawFns[name] = fn; }
+
+    drawSkillVisuals(ctx, cameraX, cameraY, player) {
+        const fns = Object.values(this._drawFns);
+        for (let i = 0; i < fns.length; i++) { fns[i](ctx, cameraX, cameraY, player); }
+    }
+ drawVisuals(ctx, cameraX, cameraY, player) {
         const rs = this.runtimeState;
 
         // 雷暴云

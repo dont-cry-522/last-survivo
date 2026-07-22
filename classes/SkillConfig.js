@@ -88,6 +88,19 @@ class SkillConfig {
 function _ensureBurnProcessor(sm) {
     if (sm.runtimeState._burnProcessorReady) return;
     sm.runtimeState._burnProcessorReady = true;
+    // 火焰区域视觉
+    sm.registerDraw('fireZones', function(ctx, cx, cy, p) {
+        const zones = sm.runtimeState._fireZones;
+        if (!zones) return;
+        for (const z of zones) {
+            const zx = z.x - cx, zy = z.y - cy;
+            ctx.save(); ctx.globalAlpha = 0.25 + Math.sin(Date.now() * 0.01) * 0.1;
+            const grad = ctx.createRadialGradient(zx, zy, 0, zx, zy, z.radius);
+            grad.addColorStop(0, '#ff4400'); grad.addColorStop(0.5, '#ff6600'); grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(zx, zy, z.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+    });
     sm.registerHandler(SkillEffectType.PERIODIC, '__shield_regen__', function(dt, ctx) {
         if (sm.runtimeState._shieldRegen && ctx.player.shield > 0) {
             ctx.player.shield = Math.min(sm.runtimeState._shieldMax || ctx.player.shield, ctx.player.shield + sm.runtimeState._shieldRegen * dt);

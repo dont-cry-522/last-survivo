@@ -20,6 +20,14 @@ class ShadowSkills {
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
+                sm.registerDraw("afterimages", function(ctx,cx,cy,p) {
+                    const im=sm.runtimeState._afterimages; if(!im)return;
+                    for(const i of im) {
+                        const ax=i.x-cx, ay=i.y-cy, fade=Math.max(0,i.life/0.5);
+                        ctx.save();ctx.globalAlpha=fade*0.8;ctx.fillStyle="#aa66ff";ctx.shadowBlur=10;ctx.shadowColor="#9966ff";
+                        ctx.beginPath();ctx.arc(ax,ay,8,0,Math.PI*2);ctx.fill();ctx.restore();
+                    }
+                });
                 if (!sm.runtimeState._afterimages) sm.runtimeState._afterimages = [];
                 sm.registerHandler(SkillEffectType.ON_DASH, 'afterimage_blast', function(ctx) {
                     const inst = sm.getSkill('afterimage_blast');
@@ -193,6 +201,15 @@ class ShadowSkills {
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
+                sm.registerDraw("traps", function(ctx,cx,cy,p) {
+                    const tr=sm.runtimeState._traps; if(!tr)return;
+                    for(const t of tr) {
+                        const tx=t.x-cx, ty=t.y-cy;
+                        ctx.save();ctx.globalAlpha=0.6;ctx.strokeStyle="#9966ff";ctx.lineWidth=2;ctx.setLineDash([4,4]);
+                        ctx.beginPath();ctx.arc(tx,ty,t.radius,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+                        ctx.fillStyle="#9966ff";ctx.beginPath();ctx.arc(tx,ty,5,0,Math.PI*2);ctx.fill();ctx.restore();
+                    }
+                });
                 if (!sm.runtimeState._traps) sm.runtimeState._traps = [];
                 sm.registerHandler(SkillEffectType.ON_DASH, 'trap_rune', function(ctx) {
                     const inst = sm.getSkill('trap_rune');
