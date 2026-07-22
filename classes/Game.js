@@ -373,6 +373,8 @@ class Game {
         // 子弹碰撞检测
         this.checkBulletCollisions();
 
+        const killsBefore = this.player.kills;
+
         // 更新敌人
         this.enemyManager.update(deltaTime, this.player, this.particleManager, this.experienceManager, this.audio);
 
@@ -385,6 +387,12 @@ class Game {
                 this.screenShake = Math.max(this.screenShake, 20);
                 this.audio.bossDead();
             }
+        }
+
+        // 技能进化追踪：击杀
+        const newKills = this.player.kills - killsBefore;
+        for (let k = 0; k < newKills; k++) {
+            this.skillManager.trackKill();
         }
 
         // 更新经验球
@@ -558,6 +566,10 @@ class Game {
                             this.audio.critHit();
                         } else {
                             this.audio.hit();
+                        }
+
+                        if (enemy.type === 'elite') {
+                            this.skillManager.trackEliteHit();
                         }
 
                         this.skillManager.trigger(SkillEffectType.ON_HIT, {

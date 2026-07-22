@@ -307,6 +307,24 @@ class SkillManager {
     // ================================================================
 
     /**
+     * 追踪击杀（进化条件用）
+     */
+    trackKill() {
+        for (const inst of this.skills) {
+            inst.onKill();
+        }
+    }
+
+    /**
+     * 追踪精英伤害（进化条件用）
+     */
+    trackEliteHit() {
+        for (const inst of this.skills) {
+            inst.onDamageElite();
+        }
+    }
+
+    /**
      * 注册技能效果处理器（由 apply 函数调用）
      * @param {string} effectType - SkillEffectType
      * @param {string} skillId
