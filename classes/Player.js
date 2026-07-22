@@ -264,8 +264,54 @@ class Player {
             );
         }
 
+        this.autoAttack(deltaTime, enemies, bulletManager, particleManager);
     }
 
+    draw(ctx, cameraX, cameraY) {
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(this.angle);
+
+        if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer * 20) % 2 === 0) ctx.globalAlpha = 0.5;
+
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.glowColor;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(this.size, 0);
+        ctx.lineTo(-this.size * 0.7, -this.size * 0.7);
+        ctx.lineTo(-this.size * 0.4, 0);
+        ctx.lineTo(-this.size * 0.7, this.size * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(this.size * 0.6, 0);
+        ctx.lineTo(-this.size * 0.2, -this.size * 0.3);
+        ctx.lineTo(-this.size * 0.2, this.size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.size * 0.1, 0, this.size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.shield > 0) {
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
 
     reset(x, y) {
         const cfg = Config.PLAYER;

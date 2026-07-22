@@ -10,18 +10,10 @@
     <div id="game-container">
         <div class="game-header">LAST SURVIVOR · 末日幸存者</div>
         <canvas id="gameCanvas"></canvas>
-        <canvas id="uiCanvas"></canvas>
         <div class="game-footer">WASD 移动 | Shift 冲刺 | ESC 暂停 | R 重开 | M 静音</div>
     </div>
 
-    <!-- Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-
-    <!-- 渲染层 -->
-    <script src="classes/ThreeRenderer.js"></script>
-    <script src="classes/RenderSystem.js"></script>
-
-    <!-- 游戏逻辑 - 按依赖顺序 -->
+    <!-- 游戏类文件 - 按依赖顺序加载 -->
     <script src="classes/Config.js"></script>
     <script src="classes/Utils.js"></script>
     <script src="classes/ObjectPool.js"></script>
@@ -40,6 +32,8 @@
     <script src="classes/SkillManager.js"></script>
     <script src="classes/SkillUI.js"></script>
     <script src="classes/Game.js"></script>
+
+    <!-- 游戏入口 -->
     <script src="game.js"></script>
 </body>
 </html>

@@ -1,13 +1,13 @@
-﻿/**
+/**
  * ============================================================
- *  Experience.js - 缁忛獙鐞冪郴缁?
+ *  Experience.js - 经验球系统
  * ============================================================
- *  鏁屼汉姝讳骸鎺夎惤缁忛獙鐞冿紝鐜╁闈犺繎鑷姩鍚稿彇
- *  鏀寔纾侀搧鏁堟灉锛堝崌绾у悗鎵╁ぇ鍚稿彇鑼冨洿锛?
- *  浣跨敤瀵硅薄姹犱紭鍖栨€ц兘
- *  TODO: 鍙互鍔犲叆涓嶅悓鍝佽川鐨勭粡楠岀悆锛堢豢/钃?绱?閲戯級
- *  TODO: 鍙互鍔犲叆閲戝竵鐙珛鎺夎惤
- *  TODO: 鍙互鍔犲叆鍚稿紩绮掑瓙鐗规晥
+ *  敌人死亡掉落经验球，玩家靠近自动吸取
+ *  支持磁铁效果（升级后扩大吸取范围）
+ *  使用对象池优化性能
+ *  TODO: 可以加入不同品质的经验球（绿/蓝/紫/金）
+ *  TODO: 可以加入金币独立掉落
+ *  TODO: 可以加入吸引粒子特效
  * ============================================================
  */
 
@@ -22,22 +22,22 @@ class ExperienceOrb {
         this.color = Config.COLORS.expOrb;
         this.glowColor = Config.COLORS.expGlow;
 
-        // 琚惛寮曠姸鎬?
+        // 被吸引状态
         this.isAttracting = false;
         this.attractSpeed = 8;
 
-        // 鎺夎惤寮硅烦
+        // 掉落弹跳
         this.vx = 0;
         this.vy = 0;
         this.bounceDecay = 0.9;
         this.isBouncing = false;
 
-        // 鑴夊姩鍔ㄧ敾
+        // 脉动动画
         this.pulseOffset = Math.random() * Math.PI * 2;
     }
 
     /**
-     * 鍒濆鍖栫粡楠岀悆
+     * 初始化经验球
      */
     init(x, y, exp, gold = 0) {
         this.active = true;
@@ -48,23 +48,23 @@ class ExperienceOrb {
         this.isAttracting = false;
         this.isBouncing = true;
 
-        // 闅忔満寮硅烦鏂瑰悜
+        // 随机弹跳方向
         const angle = Math.random() * Math.PI * 2;
         const speed = Utils.random(1, 3);
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
 
-        // 鏍规嵁缁忛獙鍊艰皟鏁村ぇ灏?
+        // 根据经验值调整大小
         this.size = 5 + Math.min(exp / 10, 8);
     }
 
     /**
-     * 鏇存柊
+     * 更新
      */
     update(deltaTime, player, particleManager) {
         if (!this.active) return;
 
-        // 寮硅烦琛板噺
+        // 弹跳衰减
         if (this.isBouncing) {
             this.vx *= this.bounceDecay;
             this.vy *= this.bounceDecay;
@@ -76,37 +76,37 @@ class ExperienceOrb {
             }
         }
 
-        // 纾侀搧妫€娴?
+        // 磁铁检测
         const dist = Utils.distance(this.x, this.y, player.x, player.y);
         if (dist < player.magnetRange) {
             this.isAttracting = true;
         }
 
-        // 琚惛寮曞悜鐜╁
+        // 被吸引向玩家
         if (this.isAttracting) {
             const angle = Utils.angle(this.x, this.y, player.x, player.y);
-            // 瓒婅繎瓒婂揩
+            // 越近越快
             const speedMultiplier = Utils.clamp(1 + (player.magnetRange - dist) / player.magnetRange, 1, 3);
             this.x += Math.cos(angle) * this.attractSpeed * speedMultiplier * deltaTime * 60;
             this.y += Math.sin(angle) * this.attractSpeed * speedMultiplier * deltaTime * 60;
 
-            // 鍚稿紩绮掑瓙杞ㄨ抗
+            // 吸引粒子轨迹
             if (Math.random() < 0.3) {
                 particleManager.spawnExpPickup(this.x, this.y, this.color);
             }
         }
 
-        // 琚帺瀹舵嬀鍙?
+        // 被玩家拾取
         if (dist < player.size + this.size) {
             this.pickup(player);
-            return true; // 鏍囪闇€瑕佺Щ闄?
+            return true; // 标记需要移除
         }
 
         return false;
     }
 
     /**
-     * 琚嬀鍙?
+     * 被拾取
      */
     pickup(player) {
         this.active = false;
@@ -118,12 +118,46 @@ class ExperienceOrb {
     }
 
     /**
-     * 缁樺埗
+     * 绘制
      */
+    draw(ctx, cameraX, cameraY) {
+        if (!this.active) return;
+
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+        const pulse = 1 + Math.sin(Date.now() * 0.005 + this.pulseOffset) * 0.2;
+
+        ctx.save();
+
+        // 发光
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = this.glowColor;
+
+        // 外圈光晕
+        ctx.fillStyle = this.glowColor;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size * pulse * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 核心
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 高光
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.arc(screenX - this.size * 0.3, screenY - this.size * 0.3, this.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
 }
 
 /**
- * 缁忛獙鐞冪鐞嗗櫒
+ * 经验球管理器
  */
 class ExperienceManager extends ObjectPool {
     constructor(maxOrbs = 300) {
@@ -131,7 +165,7 @@ class ExperienceManager extends ObjectPool {
     }
 
     /**
-     * 鐢熸垚缁忛獙鐞?
+     * 生成经验球
      */
     spawnOrb(x, y, exp, gold = 0) {
         const orb = this.acquire();
@@ -142,8 +176,8 @@ class ExperienceManager extends ObjectPool {
     }
 
     /**
-     * 鏇存柊鎵€鏈夌粡楠岀悆
-     * @returns {boolean} 鏄惁鏈夊崌绾?
+     * 更新所有经验球
+     * @returns {boolean} 是否有升级
      */
     update(deltaTime, player, particleManager) {
         let leveledUp = false;
@@ -161,6 +195,10 @@ class ExperienceManager extends ObjectPool {
         return leveledUp;
     }
 
+    draw(ctx, cameraX, cameraY) {
+        for (let i = 0; i < this.pool.length; i++) {
+            this.pool[i].draw(ctx, cameraX, cameraY);
+        }
     }
 }
 

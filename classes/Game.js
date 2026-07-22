@@ -15,21 +15,16 @@
 class Game {
     constructor(canvas) {
         this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
 
+        // 画布尺寸
         this.canvas.width = Config.CANVAS_WIDTH;
         this.canvas.height = Config.CANVAS_HEIGHT;
 
-        this.renderSystem = new RenderSystem(canvas, this.canvas.width, this.canvas.height);
-
-        this.uiCanvas = document.getElementById('uiCanvas');
-        if (this.uiCanvas) {
-            this.uiCanvas.width = Config.CANVAS_WIDTH;
-            this.uiCanvas.height = Config.CANVAS_HEIGHT;
-            this.uiCtx = this.uiCanvas.getContext('2d');
-        }
-
+        // 游戏状态: start, playing, paused, upgrading, gameover
         this.state = 'start';
 
+        // 相机
         this.cameraX = 0;
         this.cameraY = 0;
         this.screenShake = 0;
@@ -617,42 +612,136 @@ class Game {
      * 渲染
      */
     render() {
+        const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
 
+        // 震屏偏移
+        let shakeX = 0, shakeY = 0;
+        if (this.screenShake > 0) {
+            shakeX = Utils.random(-this.screenShake, this.screenShake);
+            shakeY = Utils.random(-this.screenShake, this.screenShake);
+        }
+
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+
+        // 清空画布
+        ctx.fillStyle = Config.COLORS.background;
+        ctx.fillRect(0, 0, w, h);
+
+        // 开始界面
         if (this.state === 'start') {
-            this.renderSystem.update(0);
-            if (this.uiCtx) {
-                this.uiManager.drawStartScreen(this.uiCtx, w, h);
-            }
+            this.uiManager.drawStartScreen(ctx, w, h);
+            ctx.restore();
             return;
         }
 
-        this.renderSystem.syncFromGame(this);
-        this.renderSystem.update(this.deltaTime);
+        // 绘制背景网格
+        this.drawGrid(ctx);
 
-        if (this.uiCtx) {
-            const ctx = this.uiCtx;
-            ctx.clearRect(0, 0, w, h);
+        // 相机变换
+        ctx.save();
 
-            if (this.boss.active) {
-                this.boss.drawHealthBar(ctx, w);
-            }
+        // 绘制经验球（底层）
+        this.experienceManager.draw(ctx, this.cameraX, this.cameraY);
 
-            this.uiManager.drawHUD(ctx, this.player, this, w, h);
+        // 绘制粒子
+        this.particleManager.draw(ctx, this.cameraX, this.cameraY);
 
-            if (this.state === 'upgrading') {
-                this.skillUI.draw(ctx, w, h);
-            }
+        // 绘制敌人
+        this.enemyManager.draw(ctx, this.cameraX, this.cameraY);
 
-            if (this.state === 'paused') {
-                this.uiManager.drawPauseScreen(ctx, w, h);
-            }
-
-            if (this.state === 'gameover') {
-                this.uiManager.drawGameOverScreen(ctx, this.player, this, w, h);
-            }
+        // 绘制Boss
+        if (this.boss.active) {
+            this.boss.draw(ctx, this.cameraX, this.cameraY);
         }
+
+        // 绘制玩家
+        this.player.draw(ctx, this.cameraX, this.cameraY);
+
+        // 绘制子弹（顶层）
+        this.bulletManager.draw(ctx, this.cameraX, this.cameraY);
+
+        ctx.restore();
+
+        // ===== 屏幕空间UI =====
+
+        // Boss血条
+        if (this.boss.active) {
+            this.boss.drawHealthBar(ctx, w);
+        }
+
+        // HUD
+        this.uiManager.drawHUD(ctx, this.player, this, w, h);
+
+        // 升级面板
+        if (this.state === 'upgrading') {
+            this.skillUI.draw(ctx, w, h);
+        }
+
+        // 暂停界面
+        if (this.state === 'paused') {
+            this.uiManager.drawPauseScreen(ctx, w, h);
+        }
+
+        // 游戏结束界面
+        if (this.state === 'gameover') {
+            this.uiManager.drawGameOverScreen(ctx, this.player, this, w, h);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * 绘制背景网格
+     */
+    drawGrid(ctx) {
+        const gridSize = Config.GRID_SIZE;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // 计算网格偏移（随相机移动）
+        const offsetX = -this.cameraX % gridSize;
+        const offsetY = -this.cameraY % gridSize;
+
+        ctx.strokeStyle = Config.COLORS.grid;
+        ctx.lineWidth = 1;
+
+        // 垂直线
+        ctx.beginPath();
+        for (let x = offsetX; x < w; x += gridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+        }
+        ctx.stroke();
+
+        // 水平线
+        ctx.beginPath();
+        for (let y = offsetY; y < h; y += gridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+        }
+        ctx.stroke();
+
+        // 高亮网格线（每5格）
+        ctx.strokeStyle = Config.COLORS.gridBright;
+        ctx.lineWidth = 1;
+
+        const brightGridSize = gridSize * 5;
+        const brightOffsetX = -this.cameraX % brightGridSize;
+        const brightOffsetY = -this.cameraY % brightGridSize;
+
+        ctx.beginPath();
+        for (let x = brightOffsetX; x < w; x += brightGridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+        }
+        for (let y = brightOffsetY; y < h; y += brightGridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+        }
+        ctx.stroke();
     }
 }
 

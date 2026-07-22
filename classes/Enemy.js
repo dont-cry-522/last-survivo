@@ -142,6 +142,104 @@ class Enemy {
             }
         }
     }
+
+    /**
+     * 绘制敌人
+     */
+    draw(ctx, cameraX, cameraY) {
+        if (!this.active) return;
+
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+
+        ctx.save();
+
+        ctx.shadowBlur = EnemyConfig.GLOW_BLUR;
+        ctx.shadowColor = this.glowColor;
+
+        let fillColor = this.color;
+        if (this.hitFlash > 0) {
+            fillColor = '#ffffff';
+        }
+
+        ctx.fillStyle = fillColor;
+
+        switch (this.type) {
+            case 'normal':
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+
+            case 'fast':
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY - this.size);
+                ctx.lineTo(screenX + this.size * 0.7, screenY);
+                ctx.lineTo(screenX, screenY + this.size);
+                ctx.lineTo(screenX - this.size * 0.7, screenY);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'tank':
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const a = (i / 6) * Math.PI * 2;
+                    const px = screenX + Math.cos(a) * this.size;
+                    const py = screenY + Math.sin(a) * this.size;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'exploder':
+                const pulse = 1 + Math.sin(Date.now() * EnemyConfig.EXPLODER_PULSE_SPEED) * EnemyConfig.EXPLODER_PULSE_AMPLITUDE;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.size * pulse, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.size * EnemyConfig.EXPLODER_INNER_RATIO, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+
+            case 'elite':
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const a = (i / 8) * Math.PI * 2;
+                    const r = i % 2 === 0 ? this.size : this.size * EnemyConfig.ELITE_STAR_INNER_RATIO;
+                    const px = screenX + Math.cos(a) * r;
+                    const py = screenY + Math.sin(a) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+        }
+
+        if (this.hp < this.maxHp) {
+            ctx.shadowBlur = 0;
+            const barWidth = this.size * EnemyConfig.HP_BAR_WIDTH_RATIO;
+            const barHeight = EnemyConfig.HP_BAR_HEIGHT;
+            const barX = screenX - barWidth / 2;
+            const barY = screenY - this.size - EnemyConfig.HP_BAR_OFFSET_Y;
+
+            ctx.fillStyle = EnemyConfig.HP_BAR_BG;
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            const hpPercent = this.hp / this.maxHp;
+            ctx.fillStyle = hpPercent > EnemyConfig.HP_THRESHOLD_HIGH ? EnemyConfig.HP_COLOR_HIGH
+                : hpPercent > EnemyConfig.HP_THRESHOLD_MID ? EnemyConfig.HP_COLOR_MID
+                : EnemyConfig.HP_COLOR_LOW;
+            ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+        }
+
+        ctx.restore();
+    }
 }
 
 /**
@@ -244,6 +342,12 @@ class EnemyManager extends ObjectPool {
         }
 
         e.die();
+    }
+
+    draw(ctx, cameraX, cameraY) {
+        for (let i = 0; i < this.pool.length; i++) {
+            this.pool[i].draw(ctx, cameraX, cameraY);
+        }
     }
 }
 
