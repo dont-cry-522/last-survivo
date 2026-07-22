@@ -355,6 +355,14 @@ class SkillManager {
      * @param {Object} gameContext - { player, enemies, bulletManager, particleManager }
      */
     update(deltaTime, gameContext) {
+        // 懒初始化：首次 update 时注册视觉处理器
+        if (!this.runtimeState._visualsReady) {
+            this.runtimeState._visualsReady = true;
+            if (typeof _ensureBurnProcessor === 'function') {
+                _ensureBurnProcessor(this);
+            }
+        }
+
         // 系统级 PERIODIC 处理器（如燃烧系统）
         const sysHandlers = this.handlers[SkillEffectType.PERIODIC] || {};
         for (const skillId in sysHandlers) {
