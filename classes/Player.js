@@ -118,6 +118,7 @@ class Player {
         this.invincibleTimer = Math.max(this.invincibleTimer, this.dashDuration);
 
         if (this.audio) this.audio.dash();
+        if (this._onDash) this._onDash();
     }
 
     takeDamage(amount) {
