@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>末日幸存者 - Last Survivor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div class="game-header">LAST SURVIVOR · 末日幸存者</div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-footer">WASD 移动 | Shift 冲刺 | ESC 暂停 | R 重开 | M 静音</div>
+    </div>
+
+    <!-- 游戏类文件 - 按依赖顺序加载 -->
+    <script src="classes/Config.js"></script>
+    <script src="classes/Utils.js"></script>
+    <script src="classes/SoundManager.js"></script>
+    <script src="classes/Particle.js"></script>
+    <script src="classes/Bullet.js"></script>
+    <script src="classes/Experience.js"></script>
+    <script src="classes/Enemy.js"></script>
+    <script src="classes/Boss.js"></script>
+    <script src="classes/Player.js"></script>
+    <script src="classes/Upgrade.js"></script>
+    <script src="classes/UI.js"></script>
+    <script src="classes/Game.js"></script>
+
+    <!-- 游戏入口 -->
+    <script src="game.js"></script>
+</body>
+</html>

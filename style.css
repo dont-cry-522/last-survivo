@@ -1,0 +1,90 @@
+/**
+ * ============================================================
+ *  style.css - 游戏样式
+ * ============================================================
+ *  页面布局、画布样式、全局设置
+ * ============================================================
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #0a0a1a;
+    font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+    color: #ffffff;
+    user-select: none;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#game-container {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    max-width: 100vw;
+    max-height: 100vh;
+}
+
+#gameCanvas {
+    display: block;
+    background-color: #0a0a1a;
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    border-radius: 4px;
+    box-shadow: 0 0 50px rgba(0, 212, 255, 0.2);
+    cursor: crosshair;
+}
+
+/* 游戏标题栏 */
+.game-header {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(0, 212, 255, 0.8);
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+
+/* 底部提示 */
+.game-footer {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+}
+
+/* 响应式缩放 */
+@media (max-width: 1300px) {
+    #game-container {
+        transform: scale(0.9);
+        transform-origin: center center;
+    }
+}
+
+@media (max-width: 1100px) {
+    #game-container {
+        transform: scale(0.75);
+    }
+}
+
+@media (max-width: 900px) {
+    #game-container {
+        transform: scale(0.6);
+    }
+}
