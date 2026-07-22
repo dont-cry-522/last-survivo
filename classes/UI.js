@@ -368,19 +368,78 @@ class UIManager {
         ctx.globalAlpha = this.pauseAlpha;
 
         // 半透明背景
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // 暂停文字
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 48px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('游戏暂停', canvasWidth / 2, canvasHeight / 2 - 20);
+        const cx = canvasWidth / 2;
 
-        ctx.font = '18px Arial';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillText('按 ESC 继续游戏', canvasWidth / 2, canvasHeight / 2 + 30);
-        ctx.fillText('按 R 重新开始', canvasWidth / 2, canvasHeight / 2 + 60);
+        // 标题
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'rgba(0, 212, 255, 0.6)';
+        ctx.fillText('游戏暂停', cx, 80);
+        ctx.shadowBlur = 0;
+
+        // 操作面板
+        const panelW = 500;
+        const panelH = 300;
+        const panelX = cx - panelW / 2;
+        const panelY = 110;
+
+        ctx.fillStyle = 'rgba(20, 20, 40, 0.9)';
+        ctx.strokeStyle = '#00d4ff';
+        ctx.lineWidth = 1.5;
+        this.roundRect(ctx, panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // 操作说明标题
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText('操作说明', cx, panelY + 28);
+
+        // 操作列表
+        const controls = [
+            { key: 'W A S D', desc: '八方向移动' },
+            { key: 'Shift', desc: '冲刺（无敌帧，2秒冷却）' },
+            { key: 'ESC', desc: '暂停 / 继续游戏' },
+            { key: 'R', desc: '重新开始游戏' },
+            { key: 'M', desc: '静音 / 取消静音' },
+            { key: '1 2 3', desc: '升级时直接选择对应选项' },
+            { key: '← → + Enter', desc: '升级时方向键选择后确认' },
+            { key: '鼠标点击', desc: '选择升级卡片 / 点击按钮' },
+        ];
+
+        ctx.textAlign = 'left';
+        const startY = panelY + 60;
+        const lineHeight = 28;
+        const colX = panelX + 30;
+
+        controls.forEach((ctrl, i) => {
+            const y = startY + i * lineHeight;
+            // 按键
+            ctx.fillStyle = '#00d4ff';
+            ctx.font = 'bold 13px "Consolas", "Courier New", monospace';
+            ctx.fillText(ctrl.key, colX, y);
+
+            // 分隔符
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillText('—', colX + 160, y);
+
+            // 说明
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.font = '13px "Microsoft YaHei", Arial, sans-serif';
+            ctx.fillText(ctrl.desc, colX + 190, y);
+        });
+
+        // 底部提示
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '15px Arial';
+        ctx.fillText('按 ESC 继续游戏', cx, panelY + panelH + 35);
+        ctx.fillText('按 R 重新开始', cx, panelY + panelH + 60);
 
         ctx.restore();
     }

@@ -159,39 +159,20 @@ class ExperienceOrb {
 /**
  * 经验球管理器
  */
-class ExperienceManager {
+class ExperienceManager extends ObjectPool {
     constructor(maxOrbs = 300) {
-        this.pool = [];
-        this.maxOrbs = maxOrbs;
-
-        // 预分配
-        for (let i = 0; i < maxOrbs; i++) {
-            this.pool.push(new ExperienceOrb());
-        }
+        super(() => new ExperienceOrb(), maxOrbs);
     }
 
     /**
      * 生成经验球
      */
     spawnOrb(x, y, exp, gold = 0) {
-        const orb = this.getOrb();
+        const orb = this.acquire();
         if (orb) {
             orb.init(x, y, exp, gold);
         }
         return orb;
-    }
-
-    /**
-     * 获取空闲经验球
-     */
-    getOrb() {
-        for (let i = 0; i < this.pool.length; i++) {
-            if (!this.pool[i].active) {
-                return this.pool[i];
-            }
-        }
-        // 池满，覆盖最老的活跃球
-        return this.pool[0];
     }
 
     /**
@@ -206,7 +187,6 @@ class ExperienceManager {
 
             const picked = orb.update(deltaTime, player, particleManager);
             if (picked) {
-                // 检查升级
                 if (player.exp >= player.expToNext) {
                     leveledUp = true;
                 }
@@ -218,26 +198,6 @@ class ExperienceManager {
     draw(ctx, cameraX, cameraY) {
         for (let i = 0; i < this.pool.length; i++) {
             this.pool[i].draw(ctx, cameraX, cameraY);
-        }
-    }
-
-    /**
-     * 获取活跃经验球数
-     */
-    getActiveCount() {
-        let count = 0;
-        for (let i = 0; i < this.pool.length; i++) {
-            if (this.pool[i].active) count++;
-        }
-        return count;
-    }
-
-    /**
-     * 清除所有
-     */
-    clear() {
-        for (let i = 0; i < this.pool.length; i++) {
-            this.pool[i].active = false;
         }
     }
 }

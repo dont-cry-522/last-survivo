@@ -17,11 +17,11 @@ class Config {
 
     // ========== 玩家初始属性 ==========
     static PLAYER = {
-        maxHp: 100,
+        maxHp: 120,
         speed: 4,
         attackSpeed: 1.0,      // 每秒攻击次数
         attackRange: 500,      // 自动索敌范围
-        bulletDamage: 10,
+        bulletDamage: 12,
         bulletSpeed: 8,
         bulletCount: 1,        // 同时发射子弹数
         pierce: 0,             // 穿透数量
@@ -35,65 +35,7 @@ class Config {
         size: 20,              // 玩家碰撞半径
     };
 
-    // ========== 敌人配置 ==========
-    static ENEMY_TYPES = {
-        normal: {
-            name: '普通敌人',
-            color: '#ff6b6b',
-            glowColor: 'rgba(255, 107, 107, 0.5)',
-            hp: 30,
-            speed: 1.5,
-            damage: 10,
-            size: 15,
-            exp: 5,
-            gold: 1,
-        },
-        fast: {
-            name: '快速敌人',
-            color: '#feca57',
-            glowColor: 'rgba(254, 202, 87, 0.5)',
-            hp: 15,
-            speed: 3.0,
-            damage: 8,
-            size: 12,
-            exp: 8,
-            gold: 2,
-        },
-        tank: {
-            name: '坦克敌人',
-            color: '#5f27cd',
-            glowColor: 'rgba(95, 39, 205, 0.5)',
-            hp: 120,
-            speed: 0.8,
-            damage: 20,
-            size: 25,
-            exp: 15,
-            gold: 5,
-        },
-        exploder: {
-            name: '自爆敌人',
-            color: '#ff9ff3',
-            glowColor: 'rgba(255, 159, 243, 0.6)',
-            hp: 20,
-            speed: 2.2,
-            damage: 35,
-            size: 14,
-            exp: 10,
-            gold: 3,
-            explodeRadius: 60,
-        },
-        elite: {
-            name: '精英怪',
-            color: '#00d2d3',
-            glowColor: 'rgba(0, 210, 211, 0.7)',
-            hp: 300,
-            speed: 1.8,
-            damage: 25,
-            size: 30,
-            exp: 50,
-            gold: 20,
-        },
-    };
+    // ========== 敌人配置 → 已迁移至 EnemyConfig.js ==========
 
     // ========== Boss配置 ==========
     static BOSS = {
@@ -114,13 +56,13 @@ class Config {
 
     // ========== 难度曲线 ==========
     static DIFFICULTY = {
-        spawnIntervalStart: 1.5,   // 初始生成间隔（秒）
-        spawnIntervalMin: 0.3,     // 最小生成间隔
-        spawnRateIncrease: 0.02,   // 每秒生成速率增加
-        enemyHpMultiplier: 0.015,  // 每秒敌人血量增加比例
-        enemySpeedMultiplier: 0.005, // 每秒敌人速度增加比例
-        eliteInterval: 30,         // 精英怪出现间隔（秒）
-        bossInterval: 90,          // Boss出现间隔（秒）
+        spawnIntervalStart: 1.8,   // 初始生成间隔（秒）
+        spawnIntervalMin: 0.4,     // 最小生成间隔
+        spawnRateIncrease: 0.015,  // 每秒生成速率增加
+        enemyHpMultiplier: 0.008,  // 每秒敌人血量增加比例
+        enemySpeedMultiplier: 0.004, // 每秒敌人速度增加比例
+        eliteInterval: 35,         // 精英怪出现间隔（秒）
+        bossInterval: 100,          // Boss出现间隔（秒）
     };
 
     // ========== 升级选项池 ==========

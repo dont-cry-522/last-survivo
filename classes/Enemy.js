@@ -3,11 +3,9 @@
  *  Enemy.js - 敌人系统
  * ============================================================
  *  四种敌人类型：普通、快速、坦克、自爆
- *  统一AI：追踪玩家，接触造成伤害
- *  自爆敌人接近后爆炸造成范围伤害
- *  TODO: 可以加入更多敌人类型（远程、治疗、护盾等）
- *  TODO: 可以加入敌人状态系统（减速、灼烧、中毒等）
- *  TODO: 可以加入敌人动画（行走、受击、死亡）
+ *  统一AI：追踪玩家移动
+ *  Enemy 实体是纯数据+行为，不直接调用任何外部系统。
+ *  所有跨系统效果（粒子/音效/经验/伤害）由 EnemyManager 统一处理。
  * ============================================================
  */
 
@@ -29,20 +27,17 @@ class Enemy {
         this.color = '#ff6b6b';
         this.glowColor = 'rgba(255, 107, 107, 0.5)';
 
-        // 自爆敌人特有
         this.explodeRadius = 0;
         this.isExploder = false;
-        this.explodeTriggerDistance = 50;
+        this.explodeTriggerDistance = EnemyConfig.EXPLODE_TRIGGER_DISTANCE;
+        this._triggeredExplode = false;
 
-        // 受击闪烁
         this.hitFlash = 0;
 
-        // 击退
         this.knockbackX = 0;
         this.knockbackY = 0;
-        this.knockbackDecay = 0.9;
+        this.knockbackDecay = EnemyConfig.KNOCKBACK_DECAY;
 
-        // 难度缩放
         this.hpMultiplier = 1;
         this.speedMultiplier = 1;
     }
@@ -51,7 +46,7 @@ class Enemy {
      * 初始化敌人
      */
     init(type, x, y, hpMultiplier = 1, speedMultiplier = 1) {
-        const cfg = Config.ENEMY_TYPES[type];
+        const cfg = EnemyConfig.TYPES[type];
         if (!cfg) return;
 
         this.active = true;
@@ -70,29 +65,30 @@ class Enemy {
         this.hitFlash = 0;
         this.knockbackX = 0;
         this.knockbackY = 0;
+        this._triggeredExplode = false;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
 
-        // 自爆敌人
         if (type === 'exploder') {
             this.isExploder = true;
             this.explodeRadius = cfg.explodeRadius;
+            this.explodeTriggerDistance = EnemyConfig.EXPLODE_TRIGGER_DISTANCE;
         } else {
             this.isExploder = false;
+            this.explodeRadius = 0;
         }
     }
 
     /**
-     * 受到伤害
+     * 受到伤害（纯数据变更，不产生外部效果）
      * @returns {boolean} 是否死亡
      */
     takeDamage(amount, bulletAngle = 0) {
         this.hp -= amount;
-        this.hitFlash = 0.1;
+        this.hitFlash = EnemyConfig.HIT_FLASH_DURATION;
 
-        // 击退效果
-        const knockbackForce = amount * 0.3;
+        const knockbackForce = amount * EnemyConfig.KNOCKBACK_FORCE_COEFFICIENT;
         this.knockbackX += Math.cos(bulletAngle) * knockbackForce;
         this.knockbackY += Math.sin(bulletAngle) * knockbackForce;
 
@@ -104,53 +100,26 @@ class Enemy {
     }
 
     /**
-     * 死亡处理
+     * 死亡（纯状态变更，外部效果由 EnemyManager 处理）
      */
-    die(particleManager, experienceManager, player) {
+    die() {
         this.active = false;
-
-        // 爆炸粒子
-        particleManager.spawnExplosion(this.x, this.y, this.color, 12);
-
-        // 掉落经验
-        experienceManager.spawnOrb(this.x, this.y, this.exp, this.gold);
-
-        // 自爆敌人死亡也爆炸
-        if (this.isExploder) {
-            this.explode(particleManager, player);
-        }
     }
 
     /**
-     * 自爆
+     * 更新移动AI（不调用任何外部系统）
+     * 仅处理：移动追踪 + 自爆接近标记
      */
-    explode(particleManager, player) {
-        // 大范围爆炸特效
-        particleManager.spawnExplosion(this.x, this.y, '#ff9ff3', 30);
-
-        // 对玩家造成范围伤害
-        const dist = Utils.distance(this.x, this.y, player.x, player.y);
-        if (dist < this.explodeRadius + player.size) {
-            player.takeDamage(this.damage);
-        }
-    }
-
-    /**
-     * 更新敌人AI
-     */
-    update(deltaTime, player, particleManager) {
+    update(deltaTime, player) {
         if (!this.active) return;
 
-        // 受击闪烁
         if (this.hitFlash > 0) {
             this.hitFlash -= deltaTime;
         }
 
-        // 击退衰减
         this.knockbackX *= this.knockbackDecay;
         this.knockbackY *= this.knockbackDecay;
 
-        // 追踪玩家
         const angle = Utils.angle(this.x, this.y, player.x, player.y);
         const moveX = Math.cos(angle) * this.speed * deltaTime * 60;
         const moveY = Math.sin(angle) * this.speed * deltaTime * 60;
@@ -158,20 +127,11 @@ class Enemy {
         this.x += moveX + this.knockbackX;
         this.y += moveY + this.knockbackY;
 
-        // 自爆敌人：接近玩家时触发爆炸
         if (this.isExploder) {
             const dist = Utils.distance(this.x, this.y, player.x, player.y);
             if (dist < this.explodeTriggerDistance) {
-                this.explode(particleManager, player);
+                this._triggeredExplode = true;
                 this.active = false;
-                particleManager.spawnExplosion(this.x, this.y, '#ff9ff3', 25);
-            }
-        }
-
-        // 接触伤害（非自爆敌人）
-        if (!this.isExploder) {
-            if (Utils.circleCollision(this.x, this.y, this.size, player.x, player.y, player.size)) {
-                player.takeDamage(this.damage * deltaTime * 2); // 持续伤害
             }
         }
     }
@@ -187,11 +147,9 @@ class Enemy {
 
         ctx.save();
 
-        // 发光
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = EnemyConfig.GLOW_BLUR;
         ctx.shadowColor = this.glowColor;
 
-        // 受击闪白
         let fillColor = this.color;
         if (this.hitFlash > 0) {
             fillColor = '#ffffff';
@@ -199,17 +157,14 @@ class Enemy {
 
         ctx.fillStyle = fillColor;
 
-        // 根据类型画不同形状
         switch (this.type) {
             case 'normal':
-                // 圆形
                 ctx.beginPath();
                 ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
                 ctx.fill();
                 break;
 
             case 'fast':
-                // 菱形
                 ctx.beginPath();
                 ctx.moveTo(screenX, screenY - this.size);
                 ctx.lineTo(screenX + this.size * 0.7, screenY);
@@ -220,7 +175,6 @@ class Enemy {
                 break;
 
             case 'tank':
-                // 六边形
                 ctx.beginPath();
                 for (let i = 0; i < 6; i++) {
                     const a = (i / 6) * Math.PI * 2;
@@ -234,25 +188,22 @@ class Enemy {
                 break;
 
             case 'exploder':
-                // 脉动圆形（危险感）
-                const pulse = 1 + Math.sin(Date.now() * 0.01) * 0.15;
+                const pulse = 1 + Math.sin(Date.now() * EnemyConfig.EXPLODER_PULSE_SPEED) * EnemyConfig.EXPLODER_PULSE_AMPLITUDE;
                 ctx.beginPath();
                 ctx.arc(screenX, screenY, this.size * pulse, 0, Math.PI * 2);
                 ctx.fill();
-                // 内部警告符号
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, this.size * 0.4, 0, Math.PI * 2);
+                ctx.arc(screenX, screenY, this.size * EnemyConfig.EXPLODER_INNER_RATIO, 0, Math.PI * 2);
                 ctx.fill();
                 break;
 
             case 'elite':
-                // 精英怪 - 八角星
                 ctx.beginPath();
                 for (let i = 0; i < 8; i++) {
                     const a = (i / 8) * Math.PI * 2;
-                    const r = i % 2 === 0 ? this.size : this.size * 0.6;
+                    const r = i % 2 === 0 ? this.size : this.size * EnemyConfig.ELITE_STAR_INNER_RATIO;
                     const px = screenX + Math.cos(a) * r;
                     const py = screenY + Math.sin(a) * r;
                     if (i === 0) ctx.moveTo(px, py);
@@ -263,21 +214,20 @@ class Enemy {
                 break;
         }
 
-        // 血条（只在受伤后显示）
         if (this.hp < this.maxHp) {
             ctx.shadowBlur = 0;
-            const barWidth = this.size * 2;
-            const barHeight = 4;
+            const barWidth = this.size * EnemyConfig.HP_BAR_WIDTH_RATIO;
+            const barHeight = EnemyConfig.HP_BAR_HEIGHT;
             const barX = screenX - barWidth / 2;
-            const barY = screenY - this.size - 8;
+            const barY = screenY - this.size - EnemyConfig.HP_BAR_OFFSET_Y;
 
-            // 背景
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = EnemyConfig.HP_BAR_BG;
             ctx.fillRect(barX, barY, barWidth, barHeight);
 
-            // 血量
             const hpPercent = this.hp / this.maxHp;
-            ctx.fillStyle = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
+            ctx.fillStyle = hpPercent > EnemyConfig.HP_THRESHOLD_HIGH ? EnemyConfig.HP_COLOR_HIGH
+                : hpPercent > EnemyConfig.HP_THRESHOLD_MID ? EnemyConfig.HP_COLOR_MID
+                : EnemyConfig.HP_COLOR_LOW;
             ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
         }
 
@@ -287,40 +237,24 @@ class Enemy {
 
 /**
  * 敌人管理器
+ * 所有跨系统效果（粒子/经验/音效/伤害）在此集中处理，
+ * 而非分散在 Enemy 实体中。未来迁移到 EventBus 监听模式。
  */
-class EnemyManager {
+class EnemyManager extends ObjectPool {
     constructor(maxEnemies = 500) {
-        this.pool = [];
-        this.maxEnemies = maxEnemies;
-        this.activeEnemies = []; // 缓存活跃敌人引用，优化遍历
-
-        // 预分配
-        for (let i = 0; i < maxEnemies; i++) {
-            this.pool.push(new Enemy());
-        }
+        super(() => new Enemy(), maxEnemies);
+        this.events = null;
     }
 
     /**
      * 生成敌人
      */
     spawn(type, x, y, hpMultiplier = 1, speedMultiplier = 1) {
-        const enemy = this.getEnemy();
+        const enemy = this.acquire();
         if (enemy) {
             enemy.init(type, x, y, hpMultiplier, speedMultiplier);
         }
         return enemy;
-    }
-
-    /**
-     * 获取空闲敌人
-     */
-    getEnemy() {
-        for (let i = 0; i < this.pool.length; i++) {
-            if (!this.pool[i].active) {
-                return this.pool[i];
-            }
-        }
-        return null; // 池满不生成
     }
 
     /**
@@ -341,48 +275,70 @@ class EnemyManager {
             const e = this.pool[i];
             if (!e.active) continue;
 
-            e.update(deltaTime, player, particleManager);
+            e.update(deltaTime, player);
 
-            if (e.hp <= 0 && e.active) {
-                e.die(particleManager, experienceManager, player);
-                player.addKill(e.type === 'elite');
+            if (!e.active) {
+                this._handleDeath(e, player, particleManager, experienceManager, audio);
+                continue;
+            }
 
-                if (audio) {
-                    if (e.isExploder) {
-                        audio.exploderExplode();
-                    } else if (e.type === 'tank' || e.type === 'elite') {
-                        audio.enemyDeadBig();
-                    } else {
-                        audio.enemyDead();
-                    }
-                }
+            if (e.hp <= 0) {
+                this._handleDeath(e, player, particleManager, experienceManager, audio);
+                continue;
+            }
+
+            if (!e.isExploder && Utils.circleCollision(e.x, e.y, e.size, player.x, player.y, player.size)) {
+                player.takeDamage(e.damage * deltaTime * EnemyConfig.CONTACT_DAMAGE_MULTIPLIER);
             }
         }
+    }
+
+    /**
+     * 统一处理敌人死亡效果
+     */
+    _handleDeath(e, player, particleManager, experienceManager, audio) {
+        if (this.events) {
+            this.events.emit('enemy:dead', {
+                x: e.x, y: e.y,
+                color: e.color,
+                isExploder: e.isExploder,
+                type: e.type,
+                exp: e.exp, gold: e.gold,
+                proximityExplode: e._triggeredExplode,
+            });
+        }
+
+        particleManager.spawnExplosion(e.x, e.y, e.color, EnemyConfig.DEATH_PARTICLE_COUNT);
+        experienceManager.spawnOrb(e.x, e.y, e.exp, e.gold);
+        player.addKill(e.type === 'elite');
+
+        if (e.isExploder) {
+            if (e._triggeredExplode) {
+                particleManager.spawnExplosion(e.x, e.y, EnemyConfig.EXPLODE_PARTICLE_COLOR, EnemyConfig.EXPLODE_PROXIMITY_PARTICLE_COUNT);
+            }
+            particleManager.spawnExplosion(e.x, e.y, EnemyConfig.EXPLODE_PARTICLE_COLOR, EnemyConfig.EXPLODE_PARTICLE_COUNT);
+            const dist = Utils.distance(e.x, e.y, player.x, player.y);
+            if (dist < e.explodeRadius + player.size) {
+                player.takeDamage(e.damage);
+            }
+        }
+
+        if (audio) {
+            if (e.isExploder) {
+                audio.exploderExplode();
+            } else if (e.type === 'tank' || e.type === 'elite') {
+                audio.enemyDeadBig();
+            } else {
+                audio.enemyDead();
+            }
+        }
+
+        e.die();
     }
 
     draw(ctx, cameraX, cameraY) {
         for (let i = 0; i < this.pool.length; i++) {
             this.pool[i].draw(ctx, cameraX, cameraY);
-        }
-    }
-
-    /**
-     * 获取活跃敌人数
-     */
-    getActiveCount() {
-        let count = 0;
-        for (let i = 0; i < this.pool.length; i++) {
-            if (this.pool[i].active) count++;
-        }
-        return count;
-    }
-
-    /**
-     * 清除所有敌人
-     */
-    clear() {
-        for (let i = 0; i < this.pool.length; i++) {
-            this.pool[i].active = false;
         }
     }
 }

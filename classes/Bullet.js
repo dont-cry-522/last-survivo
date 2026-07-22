@@ -161,39 +161,20 @@ class Bullet {
 /**
  * 子弹管理器 - 对象池
  */
-class BulletManager {
+class BulletManager extends ObjectPool {
     constructor(maxBullets = 200) {
-        this.pool = [];
-        this.maxBullets = maxBullets;
-
-        // 预分配
-        for (let i = 0; i < maxBullets; i++) {
-            this.pool.push(new Bullet());
-        }
+        super(() => new Bullet(), maxBullets);
     }
 
     /**
      * 发射一颗子弹
      */
     fire(x, y, angle, damage, speed, pierce, target = null) {
-        const bullet = this.getBullet();
+        const bullet = this.acquire();
         if (bullet) {
             bullet.init(x, y, angle, damage, speed, pierce, target);
         }
         return bullet;
-    }
-
-    /**
-     * 获取空闲子弹
-     */
-    getBullet() {
-        for (let i = 0; i < this.pool.length; i++) {
-            if (!this.pool[i].active) {
-                return this.pool[i];
-            }
-        }
-        // 池满，覆盖最老的
-        return this.pool[0];
     }
 
     update(deltaTime, enemies, particleManager) {
@@ -205,26 +186,6 @@ class BulletManager {
     draw(ctx, cameraX, cameraY) {
         for (let i = 0; i < this.pool.length; i++) {
             this.pool[i].draw(ctx, cameraX, cameraY);
-        }
-    }
-
-    /**
-     * 获取活跃子弹数
-     */
-    getActiveCount() {
-        let count = 0;
-        for (let i = 0; i < this.pool.length; i++) {
-            if (this.pool[i].active) count++;
-        }
-        return count;
-    }
-
-    /**
-     * 清除所有子弹
-     */
-    clear() {
-        for (let i = 0; i < this.pool.length; i++) {
-            this.pool[i].active = false;
         }
     }
 }

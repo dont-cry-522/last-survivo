@@ -111,36 +111,16 @@ class Particle {
 /**
  * 粒子管理器 - 对象池模式
  */
-class ParticleManager {
+class ParticleManager extends ObjectPool {
     constructor(maxCount = 500) {
-        this.pool = [];
-        this.maxCount = maxCount;
-        this.particles = []; // 活跃粒子引用
-
-        // 预分配对象池
-        for (let i = 0; i < maxCount; i++) {
-            this.pool.push(new Particle());
-        }
-    }
-
-    /**
-     * 从池中获取一个空闲粒子
-     */
-    getParticle() {
-        for (let i = 0; i < this.pool.length; i++) {
-            if (!this.pool[i].active) {
-                return this.pool[i];
-            }
-        }
-        // 池满了，返回最老的一个（覆盖策略，保证不卡）
-        return this.pool[0];
+        super(() => new Particle(), maxCount);
     }
 
     /**
      * 生成尾焰粒子
      */
     spawnTrail(x, y, angle, color) {
-        const p = this.getParticle();
+        const p = this.acquire();
         const spread = 0.3;
         const speed = Utils.random(1, 3);
         const a = angle + Math.PI + Utils.random(-spread, spread);
@@ -163,7 +143,7 @@ class ParticleManager {
      */
     spawnExplosion(x, y, color, count = 15) {
         for (let i = 0; i < count; i++) {
-            const p = this.getParticle();
+            const p = this.acquire();
             const angle = (i / count) * Math.PI * 2 + Utils.random(-0.2, 0.2);
             const speed = Utils.random(2, 6);
             p.init(x, y,
@@ -186,7 +166,7 @@ class ParticleManager {
      */
     spawnHit(x, y, color, count = 5) {
         for (let i = 0; i < count; i++) {
-            const p = this.getParticle();
+            const p = this.acquire();
             const angle = Math.random() * Math.PI * 2;
             const speed = Utils.random(1, 4);
             p.init(x, y,
@@ -208,7 +188,7 @@ class ParticleManager {
      * 生成玩家残影
      */
     spawnAfterimage(x, y, size, color) {
-        const p = this.getParticle();
+        const p = this.acquire();
         p.init(x, y, 0, 0, {
             life: 0.3,
             size: size,
@@ -222,7 +202,7 @@ class ParticleManager {
      * 生成经验吸取粒子效果
      */
     spawnExpPickup(x, y, color) {
-        const p = this.getParticle();
+        const p = this.acquire();
         const angle = Math.random() * Math.PI * 2;
         p.init(x, y,
             Math.cos(angle) * 2,
@@ -247,17 +227,6 @@ class ParticleManager {
         for (let i = 0; i < this.pool.length; i++) {
             this.pool[i].draw(ctx, cameraX, cameraY);
         }
-    }
-
-    /**
-     * 获取活跃粒子数（调试用）
-     */
-    getActiveCount() {
-        let count = 0;
-        for (let i = 0; i < this.pool.length; i++) {
-            if (this.pool[i].active) count++;
-        }
-        return count;
     }
 }
 
