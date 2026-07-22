@@ -534,8 +534,8 @@ class SkillConfig {
             synergies: ['chain_burn', 'hellfire'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 60 },
             tiers: [
-                { desc: '每 10 次攻击，砸下陨石（200 范围，300% 伤害 + 灼烧 3 层）', params: { attackCount: 10, radius: 200, dmgMul: 3, burnStacks: 3 } },
-                { desc: '每 7 次，范围 250，400% 伤害', params: { attackCount: 7, radius: 250, dmgMul: 4, burnStacks: 5 } },
+                { desc: '每 4 秒在周围随机区域降下陨石（150 范围，200% 伤害 + 灼烧 3 层）', params: { cooldown: 4, radius: 150, dmgMul: 2, burnStacks: 3 } },
+                { desc: '每 3 秒，范围 180，250% 伤害', params: { cooldown: 3, radius: 180, dmgMul: 2.5, burnStacks: 5 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 _ensureBurnProcessor(sm);
@@ -543,35 +543,26 @@ class SkillConfig {
                     const inst = sm.getSkill('firestorm');
                     if (!inst) return;
                     const p = inst.getCurrentEffect().params;
-                    let best = null, bestDensity = 0;
-                    const grid = {};
+                    if (!sm.runtimeState._firestormTimer) sm.runtimeState._firestormTimer = 0;
+                    sm.runtimeState._firestormTimer -= dt;
+                    if (sm.runtimeState._firestormTimer > 0) return;
+                    sm.runtimeState._firestormTimer = p.cooldown;
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 80 + Math.random() * 200;
+                    const fx = ctx.player.x + Math.cos(angle) * dist;
+                    const fy = ctx.player.y + Math.sin(angle) * dist;
                     for (const e of ctx.enemies) {
                         if (!e.active) continue;
-                        const gx = Math.floor(e.x / 80), gy = Math.floor(e.y / 80);
-                        const key = gx + ',' + gy;
-                        grid[key] = (grid[key] || 0) + 1;
-                        if (grid[key] > bestDensity) { bestDensity = grid[key]; best = { x: gx * 80 + 40, y: gy * 80 + 40 }; }
-                    }
-                    if (!best || !sm.runtimeState._attackCounter) sm.runtimeState._attackCounter = { count: 0 };
-                    sm.runtimeState._attackCounter.count += 1;
-                    if (sm.runtimeState._attackCounter.count >= p.attackCount) {
-                        sm.runtimeState._attackCounter.count = 0;
-                        if (!sm.runtimeState._fireZones) sm.runtimeState._fireZones = [];
-                        sm.runtimeState._fireZones.push({
-                            x: best.x, y: best.y, radius: p.radius, life: 4,
-                            dps: player.bulletDamage * p.dmgMul * 0.15,
-                        });
-                        for (const e of ctx.enemies) {
-                            if (!e.active) continue;
-                            if ((best.x - e.x) ** 2 + (best.y - e.y) ** 2 < p.radius * p.radius) {
-                                e.takeDamage(player.bulletDamage * p.dmgMul);
-                                e.burnStacks = p.burnStacks;
-                                e.burnDmgPerStack = player.bulletDamage * 0.2;
-                                e.burnTimer = 3;
-                            }
+                        if ((fx - e.x) ** 2 + (fy - e.y) ** 2 < p.radius * p.radius) {
+                            e.takeDamage(player.bulletDamage * p.dmgMul);
+                            e.burnStacks = p.burnStacks;
+                            e.burnDmgPerStack = player.bulletDamage * 0.1;
+                            e.burnTimer = 3;
                         }
-                        ctx.particleManager.spawnExplosion(best.x, best.y, '#ff6b00', 30);
                     }
+                    if (!sm.runtimeState._fireZones) sm.runtimeState._fireZones = [];
+                    sm.runtimeState._fireZones.push({ x: fx, y: fy, radius: p.radius, life: 3, dps: player.bulletDamage * p.dmgMul * 0.1 });
+                    ctx.particleManager.spawnExplosion(fx, fy, '#ff6600', 20);
                 });
             },
         },
