@@ -106,7 +106,7 @@ class Game {
             this.skillManager.trigger(SkillEffectType.ON_DAMAGED, { amount, player: this.player, game: this, enemies: this.enemyManager.getActiveEnemies() });
         };
         this.player._onDash = () => {
-            this.skillManager.trigger(SkillEffectType.ON_DASH, { player: this.player, particleManager: this.particleManager });
+            this.skillManager.trigger(SkillEffectType.ON_DASH, { player: this.player, particleManager: this.particleManager, enemies: this.enemyManager.getActiveEnemies(), dashDirection: this.player.dashDirection });
         };
 
         // 绑定事件

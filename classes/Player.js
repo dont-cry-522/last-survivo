@@ -185,6 +185,10 @@ class Player {
             this._overheatTimer -= deltaTime;
             if (this._overheatTimer <= 0) this._overheatStacks = 0;
         }
+        if (this._blinkCrit) {
+            this._blinkCrit.timer -= deltaTime;
+            if (this._blinkCrit.timer <= 0) this._blinkCrit = null;
+        }
         const bonusAS = (this._overheatStacks || 0) * (this._overheat ? this._overheat.perStack : 0);
         const currentAS = this.attackSpeed * (1 + bonusAS);
 
@@ -211,8 +215,14 @@ class Player {
                 if (bulletCount > 1) {
                     angle += (i - (bulletCount - 1) / 2) * spreadAngle;
                 }
-                const isCrit = Math.random() < this.critRate;
-                const damage = isCrit ? this.bulletDamage * this.critDamage : this.bulletDamage;
+                let isCrit = Math.random() < this.critRate;
+                let baseDmg = this.bulletDamage;
+                if (this._blinkCrit && this._blinkCrit.timer > 0) {
+                    isCrit = true;
+                    baseDmg *= (1 + (this._blinkCrit.bonus || 0));
+                }
+                const voidBonus = (window.game?.skillManager?.runtimeState?._voidStacks || 0) * (window.game?.skillManager?.getSkill('void_walker')?.getCurrentEffect()?.params?.perStack || 0);
+                const damage = (isCrit ? baseDmg * this.critDamage : baseDmg) * (1 + voidBonus);
                 const bullet = bulletManager.fire(this.x, this.y, angle, damage, this.bulletSpeed, this.pierce, target);
                 if (bullet) bullet.isCrit = isCrit;
             }
