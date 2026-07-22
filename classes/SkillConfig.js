@@ -143,9 +143,9 @@ class SkillConfig {
             synergies: ['bounce', 'splitter'],
             evolveCondition: { type: EvolutionCondition.KILL_COUNT, value: 30 },
             tiers: [
-                { desc: '同时发射 3 颗子弹，每颗伤害 60%', params: { bulletCount: 3, damageMul: 0.6, spread: 0.3 } },
-                { desc: '5 颗子弹', params: { bulletCount: 5, damageMul: 0.65, spread: 0.3 } },
-                { desc: '7 颗子弹，每颗伤害恢复至 80%', params: { bulletCount: 7, damageMul: 0.8, spread: 0.25 } },
+                { desc: '同时发射 3 颗子弹，每颗伤害 60%', params: { bulletCount: 3, damageMul: 0.6, spread: 0.5 } },
+                { desc: '5 颗子弹', params: { bulletCount: 5, damageMul: 0.65, spread: 0.5 } },
+                { desc: '7 颗子弹，每颗伤害恢复至 80%', params: { bulletCount: 7, damageMul: 0.8, spread: 0.4 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 if (prevParams) {
