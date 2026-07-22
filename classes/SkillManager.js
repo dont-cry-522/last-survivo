@@ -591,6 +591,39 @@ class SkillManager {
             }
         }
 
+        // 浮游炮 + 无人机 + 拦截机
+        const drones = rs._drones;
+        if (drones) {
+            for (const d of drones) {
+                const dx = player.x + Math.cos(d.angle) * (d.orbitR || 60) - cameraX;
+                const dy = player.y + Math.sin(d.angle) * (d.orbitR || 60) - cameraY;
+                ctx.save(); ctx.fillStyle = '#ffcc00'; ctx.shadowBlur = 10; ctx.shadowColor = '#ffaa00';
+                ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dx, dy, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+        const interceptors = rs._mothership?.interceptors;
+        if (interceptors) {
+            for (const ic of interceptors) {
+                const ix = ic.x - cameraX, iy = ic.y - cameraY;
+                ctx.save(); ctx.globalAlpha = 0.7;
+                ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(ix, iy - 8); ctx.lineTo(ix - 6, iy + 4); ctx.lineTo(ix + 6, iy + 4); ctx.closePath(); ctx.stroke();
+                ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(ix, iy + 2, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+        // 母舰
+        if (rs._mothership?.timer > 0) {
+            const mx = player.x - cameraX, my = player.y - cameraY - 200;
+            ctx.save(); ctx.globalAlpha = 0.5;
+            ctx.fillStyle = '#444466'; ctx.shadowBlur = 20; ctx.shadowColor = '#334466';
+            ctx.beginPath(); ctx.ellipse(mx, my, 80, 20, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#666688'; ctx.beginPath(); ctx.ellipse(mx, my - 4, 50, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
         // 火焰环（超新星）
         if (rs._supernova && rs._supernova.timer < 2 && rs._supernova.timer > 0) {
             const snap = Math.max(0, 2 - rs._supernova.timer) / 2;
