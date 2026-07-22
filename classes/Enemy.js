@@ -74,6 +74,9 @@ class Enemy {
         this.burnStacks = 0;
         this.burnTimer = 0;
         this.burnDmgPerStack = 0;
+        this.slowAmount = 0;
+        this.frozen = false;
+        this.frozenTimer = 0;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
@@ -134,12 +137,22 @@ class Enemy {
             if (this.burnTimer <= 0) { this.burnStacks = 0; this.burnTimer = 0; }
         }
 
+        if (this.frozen) {
+            this.frozenTimer -= deltaTime;
+            if (this.frozenTimer <= 0) { this.frozen = false; }
+        }
+
+        if (!this.frozen && this.slowAmount > 0) {
+            this.slowAmount = Math.max(0, this.slowAmount - deltaTime * 0.5);
+        }
+
         this.knockbackX *= this.knockbackDecay;
         this.knockbackY *= this.knockbackDecay;
 
         const angle = Utils.angle(this.x, this.y, player.x, player.y);
-        const moveX = Math.cos(angle) * this.speed * deltaTime * 60;
-        const moveY = Math.sin(angle) * this.speed * deltaTime * 60;
+        const speedMul = this.frozen ? 0 : (1 - this.slowAmount);
+        const moveX = Math.cos(angle) * this.speed * speedMul * deltaTime * 60;
+        const moveY = Math.sin(angle) * this.speed * speedMul * deltaTime * 60;
 
         this.x += moveX + this.knockbackX;
         this.y += moveY + this.knockbackY;
@@ -171,6 +184,11 @@ class Enemy {
         if (this.burnStacks > 0) {
             fillColor = this.hitFlash > 0 ? '#ffaa00' : '#ff6600';
             ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+        } else if (this.frozen) {
+            fillColor = '#88ccff';
+            ctx.shadowColor = 'rgba(100, 180, 255, 0.8)';
+        } else if (this.slowAmount > 0) {
+            fillColor = '#aaccee';
         } else if (this.hitFlash > 0) {
             fillColor = '#ffffff';
         }

@@ -103,7 +103,7 @@ class Game {
         this.player = new Player(0, 0);
         this.player.audio = this.audio;
         this.player._onDamaged = (amount) => {
-            this.skillManager.trigger(SkillEffectType.ON_DAMAGED, { amount, player: this.player, game: this });
+            this.skillManager.trigger(SkillEffectType.ON_DAMAGED, { amount, player: this.player, game: this, enemies: this.enemyManager.getActiveEnemies() });
         };
 
         // 绑定事件
@@ -396,6 +396,9 @@ class Game {
         const newKills = this.player.kills - killsBefore;
         for (let k = 0; k < newKills; k++) {
             this.skillManager.trackKill();
+        }
+        if (newKills > 0) {
+            this.skillManager.trigger(SkillEffectType.ON_KILL, { count: newKills, player: this.player, enemies: this.enemyManager.getActiveEnemies(), particleManager: this.particleManager, bulletManager: this.bulletManager });
         }
 
         // 更新经验球
