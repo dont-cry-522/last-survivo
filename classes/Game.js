@@ -93,6 +93,9 @@ class Game {
         this.experienceManager = new ExperienceManager(300);
         this.upgradeManager = new UpgradeManager();
         this.uiManager = new UIManager();
+        this.skillManager = new SkillManager();
+        this.skillUI = new SkillUI();
+        this.skillUI.bind(this.skillManager);
         this.boss = new Boss();
         this.boss.audio = this.audio;
 
@@ -157,8 +160,10 @@ class Game {
 
         // 升级面板中
         if (this.state === 'upgrading') {
-            this.upgradeManager.handleKey(key);
-            if (!this.upgradeManager.isUpgrading) {
+            const selected = this.skillUI.handleKey(key);
+            if (selected) {
+                this.skillManager.acquire(selected, { survivalTime: this.survivalTime, player: this.player });
+                this.skillUI.close();
                 this.state = 'playing';
             }
             return;
@@ -213,11 +218,13 @@ class Game {
         }
 
         if (this.state === 'upgrading') {
-            this.upgradeManager.handleClick(
+            const selected = this.skillUI.handleClick(
                 this.mouseX, this.mouseY,
                 this.canvas.width, this.canvas.height
             );
-            if (!this.upgradeManager.isUpgrading) {
+            if (selected) {
+                this.skillManager.acquire(selected, { survivalTime: this.survivalTime, player: this.player });
+                this.skillUI.close();
                 this.state = 'playing';
             }
             return;
@@ -281,6 +288,8 @@ class Game {
 
         // 重置UI
         this.uiManager.reset();
+        this.skillManager.reset();
+        this.skillUI.close();
     }
 
     /**
@@ -328,7 +337,7 @@ class Game {
         if (this.state === 'playing') {
             this.update(this.deltaTime);
         } else if (this.state === 'upgrading') {
-            this.upgradeManager.update(this.deltaTime);
+            this.skillUI.update(this.deltaTime);
         }
 
         // UI动画始终更新
@@ -575,7 +584,8 @@ class Game {
      */
     triggerUpgrade() {
         this.state = 'upgrading';
-        this.upgradeManager.triggerUpgrade(this.player);
+        const choices = this.skillManager.generateChoices(4);
+        this.skillUI.open(choices);
     }
 
     /**
@@ -667,7 +677,7 @@ class Game {
 
         // 升级面板
         if (this.state === 'upgrading') {
-            this.upgradeManager.draw(ctx, w, h);
+            this.skillUI.draw(ctx, w, h);
         }
 
         // 暂停界面
