@@ -162,14 +162,13 @@ class Bullet {
  * 子弹管理器 - 对象池
  */
 class BulletManager extends ObjectPool {
-    constructor(maxBullets = 200) {
+    constructor(maxBullets = 200, maxActive = 20) {
         super(() => new Bullet(), maxBullets);
+        this.maxActive = maxActive;
     }
 
-    /**
-     * 发射一颗子弹
-     */
     fire(x, y, angle, damage, speed, pierce, target = null) {
+        if (this.getActiveCount() >= this.maxActive) return null;
         const bullet = this.acquire();
         if (bullet) {
             bullet.init(x, y, angle, damage, speed, pierce, target);

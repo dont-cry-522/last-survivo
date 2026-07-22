@@ -351,7 +351,7 @@ class SkillConfig {
             synergies: ['spread_shot', 'overheat'],
             evolveCondition: null,
             tiers: [
-                { desc: '移动时身后洒落地雷（每秒 3 颗），0.5 秒激活，100% 伤害，80 范围', params: { rate: 3, radius: 80, damageMul: 1.0, armTime: 0.5 } },
+                { desc: '移动时身后洒落地雷（每秒 3 颗），0.5 秒激活，100% 伤害，150 范围', params: { rate: 3, radius: 150, damageMul: 1.0, armTime: 0.5 } },
             ],
             apply: function(player, sm, params, prevParams) {
                 sm.registerHandler(SkillEffectType.PERIODIC, 'terminator_barrage', function(dt, ctx) {
