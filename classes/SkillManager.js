@@ -1,0 +1,306 @@
+/**
+ * ============================================================
+ *  SkillManager.js - 技能系统核心管理器
+ * ============================================================
+ *  管理所有已获得技能、生成升级选项、处理进化、维护效果注册表
+ *
+ *  职责：
+ *    1. 持有所有 SkillInstance
+ *    2. 按权重随机生成升级选项
+ *    3. 获取技能（首次获得 → T1 / 复选 → 进化或强化）
+ *    4. 维护 effectType → [SkillInstance] 注册表
+ *    5. 检测技能间联动（Synergy）
+ *    6. 提供 getActiveEffects(type) 给游戏系统查询
+ * ============================================================
+ */
+
+class SkillManager {
+    constructor() {
+        /** @type {SkillInstance[]} */
+        this.skills = [];
+
+        /**
+         * 效果注册表
+         * { 'projectile_modifier': [SkillInstance, ...], 'on_kill': [...], ... }
+         */
+        this.effectRegistry = {};
+
+        /** 当前激活的联动 */
+        this.activeSynergies = [];
+
+        /** 每局可刷新升级选项的次数 */
+        this.rerollsRemaining = 1;
+
+        /** 上次展示的选项（用于检测复选） */
+        this.lastChoices = [];
+    }
+
+    // ================================================================
+    //  升级选项生成
+    // ================================================================
+
+    /**
+     * 生成新一轮升级选项
+     * @param {number} count - 展示数量（默认4）
+     * @returns {Array<{config: SkillDefinition, instance: SkillInstance|null, isEvolution: boolean, evolution: object|null}>}
+     */
+    generateChoices(count = 4) {
+        if (SkillConfig.POOL.length === 0) {
+            return [];
+        }
+
+        const choices = [];
+        const ownedIds = new Set(this.skills.map(s => s.id));
+        const ownedCategories = new Set(this.skills.map(s => s.category));
+
+        // 构建权重池
+        const weightedPool = this._buildWeightedPool(ownedIds, ownedCategories);
+
+        // 抽取不重复的选项
+        const selected = new Set();
+        let attempts = 0;
+        while (choices.length < count && attempts < 100) {
+            attempts++;
+            const candidate = this._weightedRandom(weightedPool);
+            if (!candidate || selected.has(candidate.id)) continue;
+            selected.add(candidate.id);
+
+            const existing = this._findOwned(candidate.id);
+            choices.push({
+                config: candidate,
+                instance: existing,
+                isEvolution: existing !== null,
+                evolution: existing ? existing.getNextEvolution() : null,
+            });
+        }
+
+        this.lastChoices = choices;
+        return choices;
+    }
+
+    /**
+     * 构建按稀有度加权的技能池
+     * 优先展示：已有流派的下一阶进化 > 新流派 T1 > 通用强化
+     */
+    _buildWeightedPool(ownedIds, ownedCategories) {
+        const pool = [];
+
+        for (const def of SkillConfig.POOL) {
+            let weight = SkillRarity.getWeight(def.rarity);
+
+            // 已有流派 → 权重翻倍（鼓励深度发展）
+            if (ownedCategories.has(def.category)) {
+                weight *= 2;
+            }
+
+            // 已有技能 → 大幅提权（鼓励复选进化）
+            if (ownedIds.has(def.id)) {
+                const existing = this._findOwned(def.id);
+                if (existing && !existing.isMaxed) {
+                    weight *= 4;
+                }
+            }
+
+            // 新流派 T1 → 基础权重（鼓励探索）
+            // 已是最高阶 → 权重降为0（不再出现）
+            if (ownedIds.has(def.id)) {
+                const existing = this._findOwned(def.id);
+                if (existing && existing.isMaxed) {
+                    weight = 0;
+                }
+            }
+
+            if (weight > 0) {
+                pool.push({ def, weight });
+            }
+        }
+
+        return pool;
+    }
+
+    _weightedRandom(pool) {
+        const total = pool.reduce((sum, p) => sum + p.weight, 0);
+        let r = Math.random() * total;
+        for (const p of pool) {
+            r -= p.weight;
+            if (r <= 0) return p.def;
+        }
+        return pool.length > 0 ? pool[pool.length - 1].def : null;
+    }
+
+    // ================================================================
+    //  技能获取
+    // ================================================================
+
+    /**
+     * 获取一个技能（首次获得 / 复选进化）
+     * @param {string} skillId
+     * @param {Object} gameState - { survivalTime, player }
+     * @returns {{ action: 'added'|'evolved'|'enhanced'|'maxed', instance: SkillInstance }}
+     */
+    acquire(skillId, gameState) {
+        const existing = this._findOwned(skillId);
+
+        if (existing) {
+            if (existing.isMaxed) {
+                return { action: 'maxed', instance: existing };
+            }
+
+            const check = existing.checkEvolution(gameState);
+            if (check.canEvolve) {
+                existing.evolve();
+                this._updateRegistry(existing);
+                return { action: 'evolved', instance: existing };
+            } else {
+                // 条件不足 → 数值强化（暂用 evolve 模拟，后续可扩展）
+                existing.evolve();
+                this._updateRegistry(existing);
+                return { action: 'enhanced', instance: existing };
+            }
+        }
+
+        // 首次获得
+        const def = SkillConfig.POOL.find(d => d.id === skillId);
+        if (!def) return null;
+
+        const instance = new SkillInstance(def);
+        this.skills.push(instance);
+        this._updateRegistry(instance);
+
+        // 应用初始效果
+        if (def.apply) {
+            def.apply(null, this, instance.getCurrentEffect().params);
+        }
+
+        this._checkSynergies();
+        return { action: 'added', instance };
+    }
+
+    // ================================================================
+    //  效果注册表
+    // ================================================================
+
+    _updateRegistry(instance) {
+        const type = instance.effectType;
+        if (!this.effectRegistry[type]) {
+            this.effectRegistry[type] = [];
+        }
+        const list = this.effectRegistry[type];
+        const existing = list.findIndex(s => s.id === instance.id);
+        if (existing >= 0) {
+            list[existing] = instance;
+        } else {
+            list.push(instance);
+        }
+    }
+
+    /**
+     * 获取指定类型的所有活跃效果
+     * @param {string} effectType - SkillEffectType 之一
+     * @returns {SkillInstance[]}
+     */
+    getActiveEffects(effectType) {
+        return this.effectRegistry[effectType] || [];
+    }
+
+    /**
+     * 检查是否拥有某个技能
+     */
+    hasSkill(id) {
+        return this._findOwned(id) !== null;
+    }
+
+    /**
+     * 获取指定技能实例
+     */
+    getSkill(id) {
+        return this._findOwned(id);
+    }
+
+    // ================================================================
+    //  联动检测
+    // ================================================================
+
+    /**
+     * 检查所有技能对之间的联动
+     */
+    _checkSynergies() {
+        this.activeSynergies = [];
+        for (let i = 0; i < this.skills.length; i++) {
+            for (let j = i + 1; j < this.skills.length; j++) {
+                const a = this.skills[i];
+                const b = this.skills[j];
+                if (a.synergies.includes(b.id) || b.synergies.includes(a.id)) {
+                    this.activeSynergies.push({ skillA: a, skillB: b });
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取当前激活的联动
+     */
+    getActiveSynergies() {
+        return this.activeSynergies;
+    }
+
+    // ================================================================
+    //  辅助方法
+    // ================================================================
+
+    _findOwned(id) {
+        return this.skills.find(s => s.id === id) || null;
+    }
+
+    /**
+     * 获取已获得的技能数量
+     */
+    getSkillCount() {
+        return this.skills.length;
+    }
+
+    /**
+     * 获取某流派的技能数量
+     */
+    getCategoryCount(category) {
+        return this.skills.filter(s => s.category === category).length;
+    }
+
+    /**
+     * 重置（新游戏开始时调用）
+     */
+    reset() {
+        this.skills = [];
+        this.effectRegistry = {};
+        this.activeSynergies = [];
+        this.rerollsRemaining = 1;
+        this.lastChoices = [];
+    }
+
+    /**
+     * 刷新当前升级选项（消耗 reroll 次数）
+     */
+    reroll() {
+        if (this.rerollsRemaining <= 0) return null;
+        this.rerollsRemaining--;
+        return this.generateChoices(4);
+    }
+
+    /**
+     * 获取当前流派分布（供 UI 展示）
+     */
+    getCategorySummary() {
+        const summary = {};
+        for (const s of this.skills) {
+            if (!summary[s.category]) {
+                summary[s.category] = { count: 0, color: SkillCategory.getColor(s.category) };
+            }
+            summary[s.category].count++;
+        }
+        return summary;
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.SkillManager = SkillManager;
+}
