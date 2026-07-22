@@ -77,6 +77,8 @@ class Enemy {
         this.slowAmount = 0;
         this.frozen = false;
         this.frozenTimer = 0;
+        this.paralyzed = false;
+        this.paralyzeTimer = 0;
 
         this.hpMultiplier = hpMultiplier;
         this.speedMultiplier = speedMultiplier;
@@ -146,11 +148,16 @@ class Enemy {
             this.slowAmount = Math.max(0, this.slowAmount - deltaTime * 0.5);
         }
 
+        if (this.paralyzed) {
+            this.paralyzeTimer -= deltaTime;
+            if (this.paralyzeTimer <= 0) { this.paralyzed = false; }
+        }
+
         this.knockbackX *= this.knockbackDecay;
         this.knockbackY *= this.knockbackDecay;
 
         const angle = Utils.angle(this.x, this.y, player.x, player.y);
-        const speedMul = this.frozen ? 0 : (1 - this.slowAmount);
+        const speedMul = (this.frozen || this.paralyzed) ? 0 : (1 - this.slowAmount);
         const moveX = Math.cos(angle) * this.speed * speedMul * deltaTime * 60;
         const moveY = Math.sin(angle) * this.speed * speedMul * deltaTime * 60;
 
@@ -184,6 +191,9 @@ class Enemy {
         if (this.burnStacks > 0) {
             fillColor = this.hitFlash > 0 ? '#ffaa00' : '#ff6600';
             ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+        } else if (this.paralyzed) {
+            fillColor = '#ffff88';
+            ctx.shadowColor = 'rgba(255, 255, 100, 0.9)';
         } else if (this.frozen) {
             fillColor = '#88ccff';
             ctx.shadowColor = 'rgba(100, 180, 255, 0.8)';
