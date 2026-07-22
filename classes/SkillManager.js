@@ -363,10 +363,12 @@ class SkillManager {
             }
         }
 
-        // 系统级 PERIODIC 处理器（如燃烧系统）
+        // 系统级 PERIODIC 处理器（如燃烧系统）+ 跨类型注册的处理器
         const sysHandlers = this.handlers[SkillEffectType.PERIODIC] || {};
         for (const skillId in sysHandlers) {
             if (skillId.startsWith('__')) {
+                sysHandlers[skillId](deltaTime, gameContext);
+            } else if (this._findOwned(skillId) && !this.effectRegistry[SkillEffectType.PERIODIC]?.some(i => i.id === skillId)) {
                 sysHandlers[skillId](deltaTime, gameContext);
             }
         }
@@ -379,9 +381,15 @@ class SkillManager {
         }
 
         // SUMMON 效果
+        const summonHandlers = this.handlers[SkillEffectType.SUMMON] || {};
+        for (const skillId in summonHandlers) {
+            if (this._findOwned(skillId) && !this.effectRegistry[SkillEffectType.SUMMON]?.some(i => i.id === skillId)) {
+                summonHandlers[skillId](deltaTime, gameContext);
+            }
+        }
         const summons = this.effectRegistry[SkillEffectType.SUMMON] || [];
         for (const inst of summons) {
-            const handler = this.handlers[SkillEffectType.SUMMON]?.[inst.id];
+            const handler = summonHandlers[inst.id];
             if (handler) handler(deltaTime, gameContext, inst);
         }
     }
