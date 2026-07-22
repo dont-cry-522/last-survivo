@@ -346,34 +346,10 @@ class Boss {
             );
             ctx.stroke();
             ctx.setLineDash([]);
-        }
-
-        ctx.restore();
-
-        // AOE璀﹀憡鍦?
-        if (this.isAoeWarning) {
-            const aoeScreenX = this.aoeX - cameraX;
-            const aoeScreenY = this.aoeY - cameraY;
-            const warningProgress = 1 - this.aoeWarningTimer / this.aoeWarningDuration;
-
-            ctx.save();
-            ctx.strokeStyle = `rgba(255, 100, 100, ${0.5 + warningProgress * 0.5})`;
-            ctx.lineWidth = 3 + warningProgress * 3;
-            ctx.setLineDash([15, 10]);
-            ctx.beginPath();
-            ctx.arc(aoeScreenX, aoeScreenY, this.aoeRadius * (0.5 + warningProgress * 0.5), 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 鍐呴儴濉厖
-            ctx.fillStyle = `rgba(255, 100, 100, ${0.1 + warningProgress * 0.2})`;
-            ctx.fill();
-            ctx.setLineDash([]);
-            ctx.restore();
-        }
     }
 
     /**
-     * 缁樺埗Boss琛€鏉★紙椤堕儴涓撶敤锛?
+     * 绘制Boss血条（顶部专用）
      */
     drawHealthBar(ctx, canvasWidth) {
         if (!this.active || this.spawnWarning) return;

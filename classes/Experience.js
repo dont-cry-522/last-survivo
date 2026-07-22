@@ -147,14 +147,16 @@ class ExperienceManager extends ObjectPool {
      */
     update(deltaTime, player, particleManager) {
         let leveledUp = false;
-        const prevLevel = player.level;
         for (let i = 0; i < this.pool.length; i++) {
             const orb = this.pool[i];
             if (!orb.active) continue;
-            orb.update(deltaTime, player, particleManager);
-        }
-        if (player.level > prevLevel) {
-            leveledUp = true;
+
+            const picked = orb.update(deltaTime, player, particleManager);
+            if (picked) {
+                if (player.exp >= player.expToNext) {
+                    leveledUp = true;
+                }
+            }
         }
         return leveledUp;
     }

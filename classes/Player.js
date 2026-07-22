@@ -1,8 +1,11 @@
-﻿/**
+/**
  * ============================================================
- *  Player.js - 鐜╁椋炶埞
+ *  Player.js - 玩家飞船
  * ============================================================
- *  钃濊壊绉戞妧椋炶埞锛屽叓鏂瑰悜绉诲姩锛孲hift鍐插埡锛岃嚜鍔ㄦ敾鍑? *  鏀寔锛氬熬鐒扮矑瀛愩€佺Щ鍔ㄦ畫褰便€佸啿鍒烘畫褰? *  鎶€鑳界郴缁熼€氳繃淇敼 Player 灞炴€у疄鐜版晥鏋? * ============================================================
+ *  蓝色科技飞船，八方向移动，Shift冲刺，自动攻击
+ *  支持：尾焰粒子、移动残影、冲刺残影
+ *  技能系统通过修改 Player 属性实现效果
+ * ============================================================
  */
 
 class Player {
@@ -64,7 +67,8 @@ class Player {
         this.glowColor = Config.COLORS.playerGlow;
         this.audio = null;
 
-        // 鎶€鑳藉睘鎬?        this._spreadAngle = null;
+        // 技能属性
+        this._spreadAngle = null;
         this._dualWieldDirections = 0;
         this._overheat = null;
         this._overheatStacks = 0;
@@ -152,7 +156,7 @@ class Player {
         this.comboTimer = 3;
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
         if (isBoss) this.bossKills++;
-        // 杩囩儹锛氬嚮鏉€瑙﹀彂
+        // 过热：击杀触发
         if (this._overheat) {
             this._overheatStacks = Math.min((this._overheatStacks || 0) + 1, this._overheat.maxStacks);
             this._overheatTimer = this._overheat.duration;
@@ -174,7 +178,7 @@ class Player {
     autoAttack(deltaTime, enemies, bulletManager, particleManager) {
         this.attackTimer -= deltaTime;
 
-        // 杩囩儹璁℃椂
+        // 过热计时
         if (this._overheat && this._overheatStacks > 0) {
             this._overheatTimer -= deltaTime;
             if (this._overheatTimer <= 0) this._overheatStacks = 0;
@@ -193,7 +197,8 @@ class Player {
         const bulletCount = this.bulletCount;
         const spreadAngle = this._spreadAngle !== null ? this._spreadAngle : (bulletCount > 1 ? 0.3 : 0);
 
-        // 鍙屾寔澶氭柟鍚?        const directions = this._dualWieldDirections || 1;
+        // 双持多方向
+        const directions = this._dualWieldDirections || 1;
         const dirSpan = (directions - 1) * 0.4;
         const dirStart = -dirSpan / 2;
 
@@ -259,11 +264,8 @@ class Player {
             );
         }
 
-        this.autoAttack(deltaTime, enemies, bulletManager, particleManager);
     }
 
-        ctx.restore();
-    }
 
     reset(x, y) {
         const cfg = Config.PLAYER;
@@ -297,7 +299,8 @@ class Player {
         this.angle = -Math.PI / 2;
         this.isDashing = false;
         this.invincibleTimer = 0;
-        // 鎶€鑳藉睘鎬ч噸缃?        this._spreadAngle = null;
+        // 技能属性重置
+        this._spreadAngle = null;
         this._dualWieldDirections = 0;
         this._overheat = null;
         this._overheatStacks = 0;

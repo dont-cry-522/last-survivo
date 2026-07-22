@@ -1,11 +1,11 @@
-﻿/**
+/**
  * ============================================================
- *  Enemy.js - 鏁屼汉绯荤粺
+ *  Enemy.js - 敌人系统
  * ============================================================
- *  鍥涚鏁屼汉绫诲瀷锛氭櫘閫氥€佸揩閫熴€佸潶鍏嬨€佽嚜鐖?
- *  缁熶竴AI锛氳拷韪帺瀹剁Щ鍔?
- *  Enemy 瀹炰綋鏄函鏁版嵁+琛屼负锛屼笉鐩存帴璋冪敤浠讳綍澶栭儴绯荤粺銆?
- *  鎵€鏈夎法绯荤粺鏁堟灉锛堢矑瀛?闊虫晥/缁忛獙/浼ゅ锛夌敱 EnemyManager 缁熶竴澶勭悊銆?
+ *  四种敌人类型：普通、快速、坦克、自爆
+ *  统一AI：追踪玩家移动
+ *  Enemy 实体是纯数据+行为，不直接调用任何外部系统。
+ *  所有跨系统效果（粒子/音效/经验/伤害）由 EnemyManager 统一处理。
  * ============================================================
  */
 
@@ -45,7 +45,7 @@ class Enemy {
     }
 
     /**
-     * 鍒濆鍖栨晫浜?
+     * 初始化敌人
      */
     init(type, x, y, hpMultiplier = 1, speedMultiplier = 1) {
         const cfg = EnemyConfig.TYPES[type];
@@ -84,8 +84,8 @@ class Enemy {
     }
 
     /**
-     * 鍙楀埌浼ゅ锛堢函鏁版嵁鍙樻洿锛屼笉浜х敓澶栭儴鏁堟灉锛?
-     * @returns {boolean} 鏄惁姝讳骸
+     * 受到伤害（纯数据变更，不产生外部效果）
+     * @returns {boolean} 是否死亡
      */
     takeDamage(amount, bulletAngle = 0) {
         this.hp -= amount;
@@ -103,15 +103,15 @@ class Enemy {
     }
 
     /**
-     * 姝讳骸锛堢函鐘舵€佸彉鏇达紝澶栭儴鏁堟灉鐢?EnemyManager 澶勭悊锛?
+     * 死亡（纯状态变更，外部效果由 EnemyManager 处理）
      */
     die() {
         this.active = false;
     }
 
     /**
-     * 鏇存柊绉诲姩AI锛堜笉璋冪敤浠讳綍澶栭儴绯荤粺锛?
-     * 浠呭鐞嗭細绉诲姩杩借釜 + 鑷垎鎺ヨ繎鏍囪
+     * 更新移动AI（不调用任何外部系统）
+     * 仅处理：移动追踪 + 自爆接近标记
      */
     update(deltaTime, player) {
         if (!this.active) return;
@@ -142,95 +142,12 @@ class Enemy {
             }
         }
     }
-
-    /**
-     * 缁樺埗鏁屼汉
-     */
-
-        ctx.fillStyle = fillColor;
-
-        switch (this.type) {
-            case 'normal':
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-
-            case 'fast':
-                ctx.beginPath();
-                ctx.moveTo(screenX, screenY - this.size);
-                ctx.lineTo(screenX + this.size * 0.7, screenY);
-                ctx.lineTo(screenX, screenY + this.size);
-                ctx.lineTo(screenX - this.size * 0.7, screenY);
-                ctx.closePath();
-                ctx.fill();
-                break;
-
-            case 'tank':
-                ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const a = (i / 6) * Math.PI * 2;
-                    const px = screenX + Math.cos(a) * this.size;
-                    const py = screenY + Math.sin(a) * this.size;
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.fill();
-                break;
-
-            case 'exploder':
-                const pulse = 1 + Math.sin(Date.now() * EnemyConfig.EXPLODER_PULSE_SPEED) * EnemyConfig.EXPLODER_PULSE_AMPLITUDE;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, this.size * pulse, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, this.size * EnemyConfig.EXPLODER_INNER_RATIO, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-
-            case 'elite':
-                ctx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const a = (i / 8) * Math.PI * 2;
-                    const r = i % 2 === 0 ? this.size : this.size * EnemyConfig.ELITE_STAR_INNER_RATIO;
-                    const px = screenX + Math.cos(a) * r;
-                    const py = screenY + Math.sin(a) * r;
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.fill();
-                break;
-        }
-
-        if (this.hp < this.maxHp) {
-            ctx.shadowBlur = 0;
-            const barWidth = this.size * EnemyConfig.HP_BAR_WIDTH_RATIO;
-            const barHeight = EnemyConfig.HP_BAR_HEIGHT;
-            const barX = screenX - barWidth / 2;
-            const barY = screenY - this.size - EnemyConfig.HP_BAR_OFFSET_Y;
-
-            ctx.fillStyle = EnemyConfig.HP_BAR_BG;
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-
-            const hpPercent = this.hp / this.maxHp;
-            ctx.fillStyle = hpPercent > EnemyConfig.HP_THRESHOLD_HIGH ? EnemyConfig.HP_COLOR_HIGH
-                : hpPercent > EnemyConfig.HP_THRESHOLD_MID ? EnemyConfig.HP_COLOR_MID
-                : EnemyConfig.HP_COLOR_LOW;
-            ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-        }
-
-        ctx.restore();
-    }
 }
 
 /**
- * 鏁屼汉绠＄悊鍣?
- * 鎵€鏈夎法绯荤粺鏁堟灉锛堢矑瀛?缁忛獙/闊虫晥/浼ゅ锛夊湪姝ら泦涓鐞嗭紝
- * 鑰岄潪鍒嗘暎鍦?Enemy 瀹炰綋涓€傛湭鏉ヨ縼绉诲埌 EventBus 鐩戝惉妯″紡銆?
+ * 敌人管理器
+ * 所有跨系统效果（粒子/经验/音效/伤害）在此集中处理，
+ * 而非分散在 Enemy 实体中。未来迁移到 EventBus 监听模式。
  */
 class EnemyManager extends ObjectPool {
     constructor(maxEnemies = 500) {
@@ -239,7 +156,7 @@ class EnemyManager extends ObjectPool {
     }
 
     /**
-     * 鐢熸垚鏁屼汉
+     * 生成敌人
      */
     spawn(type, x, y, hpMultiplier = 1, speedMultiplier = 1) {
         const enemy = this.acquire();
@@ -250,7 +167,7 @@ class EnemyManager extends ObjectPool {
     }
 
     /**
-     * 鑾峰彇鎵€鏈夋椿璺冩晫浜烘暟缁?
+     * 获取所有活跃敌人数组
      */
     getActiveEnemies() {
         const result = [];
@@ -287,7 +204,7 @@ class EnemyManager extends ObjectPool {
     }
 
     /**
-     * 缁熶竴澶勭悊鏁屼汉姝讳骸鏁堟灉
+     * 统一处理敌人死亡效果
      */
     _handleDeath(e, player, particleManager, experienceManager, audio) {
         if (this.events) {
@@ -327,8 +244,6 @@ class EnemyManager extends ObjectPool {
         }
 
         e.die();
-    }
-
     }
 }
 

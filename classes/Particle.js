@@ -74,25 +74,6 @@ class Particle {
             this.alpha = t * 0.5;
         }
     }
-
-
-        ctx.fillStyle = this.color;
-
-        if (this.type === 'afterimage') {
-            // 娈嬪奖鐢绘垚鍦嗙幆
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        } else {
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, this.size * this.alpha, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.restore();
-    }
 }
 
 /**
