@@ -32,6 +32,7 @@ class Config {
         dashSpeedMultiplier: 3.5, // 冲刺速度倍率
         magnetRange: 80,       // 经验磁铁初始范围
         expMultiplier: 1.0,    // 经验获取倍率
+        levelHpBonus: 5,       // 每次升级增加最大生命值
         size: 20,              // 玩家碰撞半径
     };
 

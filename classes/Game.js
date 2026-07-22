@@ -390,6 +390,8 @@ class Game {
                 this.player.exp -= this.player.expToNext;
                 this.player.level++;
                 this.player.expToNext = Config.getExpForLevel(this.player.level);
+                this.player.maxHp += Config.PLAYER.levelHpBonus;
+                this.player.hp += Config.PLAYER.levelHpBonus;
             }
             this.triggerUpgrade();
         }
