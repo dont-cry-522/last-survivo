@@ -46,8 +46,8 @@ class SkillUI {
         this.choices = choices;
         this.isVisible = true;
         this.selectedIndex = 0;
-        this.alpha = 0;
-        this.scale = 0.85;
+        this.alpha = 1;
+        this.scale = 1;
     }
 
     /**
