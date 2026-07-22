@@ -677,6 +677,12 @@ function _ensureBurnProcessor(sm) {
             if (!e.active || !e.burnStacks) continue;
             const dps = e.burnDmgPerStack * e.burnStacks;
             e.takeDamage(dps * dt);
+            if (ctx.particleManager && Math.random() < 0.3) {
+                ctx.particleManager.spawnTrail(
+                    e.x + (Math.random() - 0.5) * e.size, e.y + (Math.random() - 0.5) * e.size,
+                    -Math.PI / 2 + Math.random() * 0.5, '#ff6600'
+                );
+            }
         }
         // 处理火焰区域
         const zones = sm.runtimeState._fireZones;

@@ -168,7 +168,10 @@ class Enemy {
         ctx.shadowColor = this.glowColor;
 
         let fillColor = this.color;
-        if (this.hitFlash > 0) {
+        if (this.burnStacks > 0) {
+            fillColor = this.hitFlash > 0 ? '#ffaa00' : '#ff6600';
+            ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+        } else if (this.hitFlash > 0) {
             fillColor = '#ffffff';
         }
 
