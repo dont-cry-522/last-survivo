@@ -25,3 +25,5 @@ class SkillConfig {
 if (typeof window !== 'undefined') {
     window.SkillConfig = SkillConfig;
 }
+
+// v2 — enums moved to SkillTypes.js
