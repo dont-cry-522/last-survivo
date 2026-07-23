@@ -67,6 +67,10 @@ class Player {
         this.glowColor = Config.COLORS.playerGlow;
         this.audio = null;
 
+        this.animTimer = 0;
+        this.muzzleFlash = 0;
+        this.walkCycle = 0;
+
         // 技能属性
         this._spreadAngle = null;
         this._dualWieldDirections = 0;
@@ -245,6 +249,7 @@ class Player {
                 const damage = (isCrit ? baseDmg * critDmg : baseDmg) * (1 + voidBonus);
                 const bullet = bulletManager.fire(this.x, this.y, angle, damage, this.bulletSpeed, this.pierce, target);
                 if (bullet) bullet.isCrit = isCrit;
+                this.muzzleFlash = 0.05;
             }
         }
 
@@ -252,10 +257,13 @@ class Player {
     }
 
     update(deltaTime, enemies, bulletManager, particleManager) {
+        this.animTimer += deltaTime;
+        if (this.muzzleFlash > 0) this.muzzleFlash -= deltaTime;
         if (this.dashCooldown > 0) { this.dashCooldown -= deltaTime; if (this.dashCooldown < 0) this.dashCooldown = 0; }
         if (this.invincibleTimer > 0) this.invincibleTimer -= deltaTime;
         if (this.comboTimer > 0) { this.comboTimer -= deltaTime; if (this.comboTimer <= 0) this.combo = 0; }
 
+        let moved = false;
         if (this.isDashing) {
             this.dashTimer -= deltaTime;
             if (this.dashTimer <= 0) this.isDashing = false;
@@ -278,11 +286,15 @@ class Player {
             this.x += dx * this.speed * deltaTime * 60;
             this.y += dy * this.speed * deltaTime * 60;
             if (dx !== 0 || dy !== 0) {
+                moved = true;
+                this.walkCycle += deltaTime * 8;
                 this.afterimageTimer -= deltaTime;
                 if (this.afterimageTimer <= 0) {
                     this.afterimageTimer = 0.08;
                     particleManager.spawnAfterimage(this.x, this.y, this.size * 0.8, this.glowColor);
                 }
+            } else {
+                this.walkCycle = 0;
             }
         }
 
@@ -302,67 +314,108 @@ class Player {
     draw(ctx, cameraX, cameraY) {
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
+        const s = this.size;
+        const t = this.animTimer;
+        const walk = Math.sin(this.walkCycle) * 2;
+
         ctx.save();
         ctx.translate(screenX, screenY);
         ctx.rotate(this.angle);
 
         if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer * 20) % 2 === 0) ctx.globalAlpha = 0.5;
 
-        const s = this.size;
+        const bodyColor = '#b8976e';
+        const darkColor = '#8a6d50';
 
-        // 引擎尾焰
-        const flameLen = 12 + Math.sin(Date.now() * 0.05) * 4;
-        const grad = ctx.createLinearGradient(-s * 0.6, 0, -s * 0.6 - flameLen, 0);
-        grad.addColorStop(0, '#00ddff'); grad.addColorStop(0.5, '#0066ff'); grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.25); ctx.lineTo(-s * 0.6 - flameLen, 0); ctx.lineTo(-s * 0.5, s * 0.25); ctx.fill();
+        // 腿（走路动画）
+        if (this.isDashing) {
+            ctx.globalAlpha *= 0.6;
+        }
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(-s * 0.15, s * 0.15, s * 0.16, s * 0.45);
+        ctx.fillRect(s * 0.02, s * 0.15, s * 0.16, s * 0.45);
+        // 靴子
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(-s * 0.2, s * 0.55, s * 0.24, s * 0.1);
+        ctx.fillRect(-s * 0.02, s * 0.55, s * 0.24, s * 0.1);
 
-        // 引擎光晕
-        ctx.shadowBlur = 15; ctx.shadowColor = '#0066ff';
-        ctx.fillStyle = '#00aaff';
-        ctx.beginPath(); ctx.arc(-s * 0.45, 0, s * 0.22, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // 主机身
-        const bodyGrad = ctx.createLinearGradient(0, -s * 0.5, 0, s * 0.5);
-        bodyGrad.addColorStop(0, '#0088cc'); bodyGrad.addColorStop(0.5, '#00ccff'); bodyGrad.addColorStop(1, '#006699');
-        ctx.fillStyle = bodyGrad;
-        ctx.shadowBlur = 15; ctx.shadowColor = this.glowColor;
+        // 披风 / 背包
+        ctx.fillStyle = '#6b5030';
         ctx.beginPath();
-        ctx.moveTo(s * 0.9, 0);
-        ctx.lineTo(-s * 0.4, -s * 0.35);
-        ctx.lineTo(-s * 0.1, 0);
-        ctx.lineTo(-s * 0.4, s * 0.35);
+        ctx.ellipse(0, s * 0.05, s * 0.3, s * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 躯干（收腰）
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.35, -s * 0.05);
+        ctx.lineTo(-s * 0.22, s * 0.3);
+        ctx.lineTo(s * 0.22, s * 0.3);
+        ctx.lineTo(s * 0.35, -s * 0.05);
         ctx.closePath();
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        // 机翼
-        ctx.fillStyle = '#0077aa';
+        // 肩甲（最宽部分）
+        ctx.fillStyle = darkColor;
         ctx.beginPath();
-        ctx.moveTo(s * 0.15, -s * 0.15);
-        ctx.lineTo(-s * 0.1, -s * 0.55);
-        ctx.lineTo(-s * 0.25, -s * 0.3);
-        ctx.closePath(); ctx.fill();
+        ctx.moveTo(-s * 0.55, -s * 0.15);
+        ctx.lineTo(-s * 0.35, -s * 0.05);
+        ctx.lineTo(-s * 0.25, -s * 0.25);
+        ctx.lineTo(-s * 0.45, -s * 0.35);
+        ctx.closePath();
+        ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(s * 0.15, s * 0.15);
-        ctx.lineTo(-s * 0.1, s * 0.55);
-        ctx.lineTo(-s * 0.25, s * 0.3);
-        ctx.closePath(); ctx.fill();
+        ctx.moveTo(s * 0.55, -s * 0.15);
+        ctx.lineTo(s * 0.35, -s * 0.05);
+        ctx.lineTo(s * 0.25, -s * 0.25);
+        ctx.lineTo(s * 0.45, -s * 0.35);
+        ctx.closePath();
+        ctx.fill();
 
-        // 驾驶舱
-        const cockpitGrad = ctx.createRadialGradient(s * 0.25, 0, 0, s * 0.25, 0, s * 0.18);
-        cockpitGrad.addColorStop(0, '#ffffff'); cockpitGrad.addColorStop(1, '#66ddff');
-        ctx.fillStyle = cockpitGrad;
-        ctx.beginPath(); ctx.ellipse(s * 0.25, 0, s * 0.2, s * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+        // 头盔
+        ctx.fillStyle = darkColor;
+        ctx.beginPath();
+        ctx.arc(0, -s * 0.2, s * 0.32, Math.PI, 0);
+        ctx.fill();
+        // 头盔顶
+        ctx.fillRect(-s * 0.32, -s * 0.38, s * 0.64, s * 0.2);
+
+        // 护目镜（琥珀色横条）
+        ctx.fillStyle = '#ff8800';
+        ctx.fillRect(-s * 0.22, -s * 0.26, s * 0.44, s * 0.07);
+        // 护目镜微光
+        ctx.fillStyle = 'rgba(255,136,0,0.3)';
+        ctx.fillRect(-s * 0.22, -s * 0.28, s * 0.44, s * 0.12);
+
+        // 枪管（从身体前方伸出）
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillRect(s * 0.38, -s * 0.1, s * 0.8, s * 0.08);
+        // 枪口
+        ctx.fillStyle = '#666';
+        ctx.fillRect(s * 1.15, -s * 0.13, s * 0.12, s * 0.14);
+
+        // 枪口火焰
+        if (this.muzzleFlash > 0) {
+            const flashAlpha = this.muzzleFlash / 0.05;
+            ctx.fillStyle = `rgba(255,200,100,${flashAlpha})`;
+            ctx.beginPath();
+            ctx.arc(s * 1.3, -s * 0.05, s * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(255,255,200,${flashAlpha * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(s * 1.3, -s * 0.05, s * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // 护盾
         if (this.shield > 0) {
-            ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)'; ctx.lineWidth = 2.5;
-            ctx.shadowBlur = 15; ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
-            ctx.beginPath(); ctx.arc(0, 0, s * 1.6, 0, Math.PI * 2); ctx.stroke();
-            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(255,180,100,0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, s * 0.05, s * 1.0, 0, Math.PI * 2);
+            ctx.stroke();
         }
+
         ctx.restore();
     }
 

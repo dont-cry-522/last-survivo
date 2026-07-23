@@ -530,13 +530,13 @@ class Game {
     _checkWaveAnnounce() {
         if (!this._announced) this._announced = {};
         if (this.survivalTime > 30 && !this._announced.fast) {
-            this._announced.fast = true; this._announce('快速敌人 出现了！', '#feca57');
+            this._announced.fast = true; this._announce('爬行者 出现了！', '#c8c0b8');
         }
         if (this.survivalTime > 60 && !this._announced.tank) {
-            this._announced.tank = true; this._announce('坦克敌人 出现了！', '#5f27cd');
+            this._announced.tank = true; this._announce('蛮兽 出现了！', '#c8b898');
         }
         if (this.survivalTime > 90 && !this._announced.exploder) {
-            this._announced.exploder = true; this._announce('自爆敌人 出现了！', '#ff9ff3');
+            this._announced.exploder = true; this._announce('脓肿 出现了！', '#ff6600');
         }
     }
 
@@ -549,7 +549,7 @@ class Game {
      * 生成精英怪
      */
     spawnElite() {
-        this._announce('精英敌人 出现了！', '#00d2d3');
+        this._announce('督军 出现了！', '#44ccdd');
         const pos = Utils.spawnPositionAround(
             this.player.x, this.player.y,
             this.canvas.width, this.canvas.height
@@ -605,23 +605,27 @@ class Game {
                             bullet.damage, bullet.isCrit
                         );
 
-                        if (bullet.isCrit) {
-                            this.audio.critHit();
-                            this.skillManager.trigger(SkillEffectType.ON_CRIT, { bullet, enemy, enemies: this.enemyManager.pool, bulletManager: this.bulletManager, particleManager: this.particleManager });
-                        } else {
-                            this.audio.hit();
+                        if (bullet.generation === 0) {
+                            if (bullet.isCrit) {
+                                this.audio.critHit();
+                                this.skillManager.trigger(SkillEffectType.ON_CRIT, { bullet, enemy, enemies: this.enemyManager.pool, bulletManager: this.bulletManager, particleManager: this.particleManager });
+                            } else {
+                                this.audio.hit();
+                            }
                         }
 
                         if (enemy.type === 'elite') {
                             this.skillManager.trackEliteHit();
                         }
 
-                        this.skillManager.trigger(SkillEffectType.ON_HIT, {
-                            bullet, enemy,
-                            enemies: this.enemyManager.pool,
-                            bulletManager: this.bulletManager,
-                            particleManager: this.particleManager,
-                        });
+                        if (bullet.generation === 0) {
+                            this.skillManager.trigger(SkillEffectType.ON_HIT, {
+                                bullet, enemy,
+                                enemies: this.enemyManager.pool,
+                                bulletManager: this.bulletManager,
+                                particleManager: this.particleManager,
+                            });
+                        }
                     }
                     if (!bullet.active) break;
                 }

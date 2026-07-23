@@ -22,14 +22,10 @@ class SkillManager {
         this.rerollsRemaining = 1;
         this.lastChoices = [];
 
-        /** 效果处理器: { effectType: { skillId: callback } } */
-        this.handlers = {};
-
-        /** 运行时状态（召唤物、计时器等） */
         this.runtimeState = {};
-
-        /** 激活的 Buff 列表（供 UI 显示） */
         this.activeBuffs = [];
+
+        this.dispatcher = new EffectDispatcher(this);
     }
 
     // ================================================================
@@ -277,6 +273,9 @@ class SkillManager {
         this.activeSynergies = [];
         this.rerollsRemaining = 1;
         this.lastChoices = [];
+        this.runtimeState = {};
+        this.activeBuffs = [];
+        this.dispatcher.reset();
     }
 
     /**
@@ -331,77 +330,25 @@ class SkillManager {
      * @param {Function} handler - 回调函数，接收 context 参数
      */
     registerHandler(effectType, skillId, handler) {
-        if (!this.handlers[effectType]) this.handlers[effectType] = {};
-        this.handlers[effectType][skillId] = handler;
+        this.dispatcher.registerHandler(effectType, skillId, handler);
     }
 
-    /**
-     * 触发指定类型的所有已注册效果
-     * @param {string} effectType
-     * @param {Object} context - 传递给每个 handler 的数据
-     */
     trigger(effectType, context) {
-        const handlers = this.handlers[effectType] || {};
-        for (const skillId in handlers) {
-            const inst = this._findOwned(skillId);
-            if (!inst) continue;
-            handlers[skillId](context, inst);
-        }
+        this.dispatcher.trigger(effectType, context);
     }
 
-    /**
-     * 每帧更新（处理 PERIODIC / SUMMON 效果）
-     * @param {number} deltaTime
-     * @param {Object} gameContext - { player, enemies, bulletManager, particleManager }
-     */
     update(deltaTime, gameContext) {
-        // 懒初始化：首次 update 时注册视觉处理器
         if (!this.runtimeState._visualsReady) {
             this.runtimeState._visualsReady = true;
-            if (typeof _ensureBurnProcessor === 'function') {
-                _ensureBurnProcessor(this);
-            }
+            this.dispatcher.ensureSystemEffects();
         }
-
-        // 系统级 PERIODIC 处理器（如燃烧系统）+ 跨类型注册的处理器
-        const sysHandlers = this.handlers[SkillEffectType.PERIODIC] || {};
-        for (const skillId in sysHandlers) {
-            if (skillId.startsWith('__')) {
-                sysHandlers[skillId](deltaTime, gameContext);
-            } else if (this._findOwned(skillId) && !this.effectRegistry[SkillEffectType.PERIODIC]?.some(i => i.id === skillId)) {
-                sysHandlers[skillId](deltaTime, gameContext);
-            }
-        }
-
-        // PERIODIC 效果（技能实例）
-        const periodics = this.effectRegistry[SkillEffectType.PERIODIC] || [];
-        for (const inst of periodics) {
-            const handler = sysHandlers[inst.id];
-            if (handler) handler(deltaTime, gameContext, inst);
-        }
-
-        // SUMMON 效果
-        const summonHandlers = this.handlers[SkillEffectType.SUMMON] || {};
-        for (const skillId in summonHandlers) {
-            if (this._findOwned(skillId) && !this.effectRegistry[SkillEffectType.SUMMON]?.some(i => i.id === skillId)) {
-                summonHandlers[skillId](deltaTime, gameContext);
-            }
-        }
-        const summons = this.effectRegistry[SkillEffectType.SUMMON] || [];
-        for (const inst of summons) {
-            const handler = summonHandlers[inst.id];
-            if (handler) handler(deltaTime, gameContext, inst);
-        }
+        this.dispatcher.update(deltaTime, gameContext);
     }
 
     // ================================================================
     //  Buff 显示
     // ================================================================
 
-    /**
-     * 获取当前激活的 Buff 列表（供 UI 渲染）
-     * @returns {Array<{id, name, tier, category, rarity}>}
-     */
     getActiveBuffs() {
         return this.skills.map(s => ({
             id: s.id,
@@ -447,196 +394,10 @@ class SkillManager {
         this._checkSynergies();
     }
 
-    /**
-     * 重置
-     */
-    reset() {
-        this.skills = [];
-        this.effectRegistry = {};
-        this.activeSynergies = [];
-        this.runtimeState = {};
-        this.activeBuffs = [];
-        this._drawFns = {};
-    }
-
-    registerDraw(name, fn) { this._drawFns[name] = fn; }
+    registerDraw(name, fn) { this.dispatcher.registerDraw(name, fn); }
 
     drawSkillVisuals(ctx, cameraX, cameraY, player) {
-        const fns = Object.values(this._drawFns);
-        for (let i = 0; i < fns.length; i++) { fns[i](ctx, cameraX, cameraY, player); }
-    }
- drawVisuals(ctx, cameraX, cameraY, player) {
-        const rs = this.runtimeState;
-
-        // 雷暴云
-        if (rs._stormCloud) {
-            const cx = player.x - cameraX, cy = player.y - cameraY - 40;
-            ctx.save();
-            ctx.globalAlpha = 0.7;
-            ctx.fillStyle = '#667799';
-            ctx.beginPath(); ctx.arc(cx - 12, cy + 4, 14, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx + 14, cy + 2, 16, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx + 2, cy - 4, 18, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#8899bb';
-            ctx.beginPath(); ctx.arc(cx + 26, cy + 8, 12, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx - 20, cy + 10, 10, 0, Math.PI * 2); ctx.fill();
-            // lightning flicker
-            if (Math.random() < 0.2) {
-                ctx.strokeStyle = '#ffff88'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(cx, cy + 18); ctx.lineTo(cx + (Math.random() - 0.5) * 30, player.y - cameraY + (Math.random() * 30)); ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // 火焰区域
-        const zones = rs._fireZones;
-        if (zones) {
-            for (const z of zones) {
-                const zx = z.x - cameraX, zy = z.y - cameraY;
-                ctx.save(); ctx.globalAlpha = 0.25 + Math.sin(Date.now() * 0.01) * 0.1;
-                const grad = ctx.createRadialGradient(zx, zy, 0, zx, zy, z.radius);
-                grad.addColorStop(0, '#ff4400'); grad.addColorStop(0.5, '#ff6600'); grad.addColorStop(1, 'transparent');
-                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(zx, zy, z.radius, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 旋转炮台
-        const turrets = rs._turrets;
-        if (turrets) {
-            for (const t of turrets) {
-                const tx = player.x + Math.cos(t.angle) * t.orbitR - cameraX;
-                const ty = player.y + Math.sin(t.angle) * t.orbitR - cameraY;
-                ctx.save(); ctx.fillStyle = '#00aacc'; ctx.shadowBlur = 8; ctx.shadowColor = '#00ddff';
-                ctx.beginPath(); ctx.arc(tx, ty, 7, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(tx, ty, 3, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 地雷
-        const mines = rs._mines?.mines;
-        if (mines) {
-            for (const m of mines) {
-                const mx = m.x - cameraX, my = m.y - cameraY;
-                const alpha = m.armed ? 0.8 : 0.3;
-                ctx.save(); ctx.globalAlpha = alpha;
-                ctx.fillStyle = m.armed ? '#ff4400' : '#ffaa00';
-                ctx.shadowBlur = m.armed ? 8 : 3; ctx.shadowColor = '#ff4400';
-                ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.fill();
-                if (m.armed) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(mx, my, 2, 0, Math.PI * 2); ctx.fill(); }
-                ctx.restore();
-            }
-        }
-
-        // 反击幻象
-        const phantoms = rs._phantoms;
-        if (phantoms) {
-            for (const p of phantoms) {
-                const px = p.x - cameraX, py = p.y - cameraY;
-                const fade = Math.max(0.1, p.life / 4);
-                ctx.save(); ctx.globalAlpha = fade * 0.6;
-                ctx.strokeStyle = '#88ff88'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(px, py, 25, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = '#88ff88'; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 残影爆炸
-        const afterimages = rs._afterimages;
-        if (afterimages) {
-            for (const im of afterimages) {
-                const ax = im.x - cameraX, ay = im.y - cameraY;
-                const fade = Math.max(0, im.life / 0.5);
-                ctx.save(); ctx.globalAlpha = fade * 0.8;
-                ctx.fillStyle = '#aa66ff'; ctx.shadowBlur = 10; ctx.shadowColor = '#9966ff';
-                ctx.beginPath(); ctx.arc(ax, ay, 8, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 残影陷阱
-        const traps = rs._traps;
-        if (traps) {
-            for (const tr of traps) {
-                const tx = tr.x - cameraX, ty = tr.y - cameraY;
-                ctx.save(); ctx.globalAlpha = 0.6;
-                ctx.strokeStyle = '#9966ff'; ctx.lineWidth = 2;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath(); ctx.arc(tx, ty, tr.radius, 0, Math.PI * 2); ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.fillStyle = '#9966ff';
-                ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 时间幻象 / 幻影射手
-        const echoes = rs._echoes;
-        if (echoes) {
-            for (const ec of echoes) {
-                const ex = ec.x - cameraX, ey = ec.y - cameraY;
-                ctx.save(); ctx.globalAlpha = 0.5;
-                ctx.fillStyle = '#cc99ff'; ctx.shadowBlur = 6; ctx.shadowColor = '#9966ff';
-                ctx.beginPath(); ctx.arc(ex, ey, 10, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-        const phantoms2 = rs._phantoms2;
-        if (phantoms2) {
-            for (const ph of phantoms2) {
-                const px = ph.x - cameraX, py = ph.y - cameraY;
-                ctx.save(); ctx.globalAlpha = 0.4;
-                ctx.strokeStyle = '#9999ff'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = '#9999ff'; ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // 浮游炮 + 无人机 + 拦截机
-        const drones = rs._drones;
-        if (drones) {
-            for (const d of drones) {
-                const dx = player.x + Math.cos(d.angle) * (d.orbitR || 60) - cameraX;
-                const dy = player.y + Math.sin(d.angle) * (d.orbitR || 60) - cameraY;
-                ctx.save(); ctx.fillStyle = '#ffcc00'; ctx.shadowBlur = 10; ctx.shadowColor = '#ffaa00';
-                ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dx, dy, 3, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-        const interceptors = rs._mothership?.interceptors;
-        if (interceptors) {
-            for (const ic of interceptors) {
-                const ix = ic.x - cameraX, iy = ic.y - cameraY;
-                ctx.save(); ctx.globalAlpha = 0.7;
-                ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(ix, iy - 8); ctx.lineTo(ix - 6, iy + 4); ctx.lineTo(ix + 6, iy + 4); ctx.closePath(); ctx.stroke();
-                ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(ix, iy + 2, 4, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            }
-        }
-        // 母舰
-        if (rs._mothership?.timer > 0) {
-            const mx = player.x - cameraX, my = player.y - cameraY - 200;
-            ctx.save(); ctx.globalAlpha = 0.5;
-            ctx.fillStyle = '#444466'; ctx.shadowBlur = 20; ctx.shadowColor = '#334466';
-            ctx.beginPath(); ctx.ellipse(mx, my, 80, 20, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#666688'; ctx.beginPath(); ctx.ellipse(mx, my - 4, 50, 12, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-        }
-
-        // 火焰环（超新星）
-        if (rs._supernova && rs._supernova.timer < 2 && rs._supernova.timer > 0) {
-            const snap = Math.max(0, 2 - rs._supernova.timer) / 2;
-            ctx.save(); ctx.globalAlpha = snap * 0.6;
-            ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 6;
-            ctx.shadowBlur = 20; ctx.shadowColor = '#ff2200';
-            ctx.beginPath(); ctx.arc(player.x - cameraX, player.y - cameraY, 600 * (1 - snap), 0, Math.PI * 2); ctx.stroke();
-            ctx.restore();
-        }
+        this.dispatcher.drawSkillVisuals(ctx, cameraX, cameraY, player);
     }
 }
 

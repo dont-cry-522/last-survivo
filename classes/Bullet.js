@@ -28,13 +28,14 @@ class Bullet {
         this.color = Config.COLORS.bullet;
         this.glowColor = Config.COLORS.bulletGlow;
         this.isCrit = false;      // 本次是否暴击
+        this.generation = 0;      // 子弹代际（0=原生，>0=分裂/召唤，不触发 ON_HIT）
         this.life = 3;            // 最大存活时间（防止飞出地图不消失）
     }
 
     /**
      * 初始化子弹（对象池复用）
      */
-    init(x, y, angle, damage, speed, pierce, target = null) {
+    init(x, y, angle, damage, speed, pierce, target = null, generation = 0) {
         this.active = true;
         this.x = x;
         this.y = y;
@@ -48,6 +49,7 @@ class Bullet {
         this.trailTimer = 0;
         this.life = 3;
         this.isCrit = false;
+        this.generation = generation;
     }
 
     /**
@@ -167,11 +169,11 @@ class BulletManager extends ObjectPool {
         this.maxActive = maxActive;
     }
 
-    fire(x, y, angle, damage, speed, pierce, target = null) {
+    fire(x, y, angle, damage, speed, pierce, target = null, generation = 0) {
         if (this.getActiveCount() >= this.maxActive) return null;
         const bullet = this.acquire();
         if (bullet) {
-            bullet.init(x, y, angle, damage, speed, pierce, target);
+            bullet.init(x, y, angle, damage, speed, pierce, target, generation);
         }
         return bullet;
     }

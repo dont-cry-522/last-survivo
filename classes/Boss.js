@@ -61,6 +61,8 @@ class Boss {
 
         // 音频引用
         this.audio = null;
+
+        this.animTimer = 0;
     }
 
     /**
@@ -196,6 +198,8 @@ class Boss {
     update(deltaTime, player, particleManager, game) {
         if (!this.active) return;
 
+        this.animTimer += deltaTime;
+
         // 出现警告
         if (this.spawnWarning) {
             this.spawnWarningTimer -= deltaTime;
@@ -288,19 +292,19 @@ class Boss {
     draw(ctx, cameraX, cameraY) {
         if (!this.active) return;
 
-        const screenX = this.x - cameraX;
-        const screenY = this.y - cameraY;
+        const sx = this.x - cameraX;
+        const sy = this.y - cameraY;
+        const s = this.size;
+        const t = this.animTimer;
+        const hpPct = this.hp / this.maxHp;
 
-        // 出现警告闪烁
         if (this.spawnWarning) {
             const alpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = this.color;
-            ctx.shadowBlur = 50;
-            ctx.shadowColor = this.glowColor;
+            ctx.fillStyle = '#cc5500';
             ctx.beginPath();
-            ctx.arc(screenX, screenY, this.size * 1.5, 0, Math.PI * 2);
+            ctx.arc(sx, sy, s * 1.8, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
             return;
@@ -308,87 +312,176 @@ class Boss {
 
         ctx.save();
 
-        // 红色光圈（脉动）
-        const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.1;
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = this.glowColor;
+        const bodyColor = this.hitFlash > 0 ? '#ffffff' : '#181010';
+        const boneColor = this.hitFlash > 0 ? '#ffffff' : '#6a2020';
+        const coreColor = this.hitFlash > 0 ? '#ffffff' : `rgb(${Math.floor(180 + hpPct * 75)},${Math.floor(60 + hpPct * 25)},0)`;
 
-        // 受击闪白
-        let fillColor = this.color;
-        if (this.hitFlash > 0) {
-            fillColor = '#ffffff';
-        }
-
-        // Boss主体 - 复杂多边形
-        ctx.fillStyle = fillColor;
+        // 地面阴影
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.beginPath();
-        const points = 8;
-        for (let i = 0; i < points; i++) {
-            const a = (i / points) * Math.PI * 2 + Date.now() * 0.0005;
-            const r = i % 2 === 0 ? this.size * pulse : this.size * 0.7 * pulse;
-            const px = screenX + Math.cos(a) * r;
-            const py = screenY + Math.sin(a) * r;
+        ctx.ellipse(sx, sy + s * 0.7, s * 1.5, s * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const stomp = Math.abs(Math.sin(t * 1.2)) * 2;
+
+        // 腿（两根粗大柱状）
+        ctx.fillStyle = bodyColor;
+        ctx.fillRect(sx - s * 0.5, sy + s * 0.1 - stomp, s * 0.35, s * 0.7);
+        ctx.fillRect(sx + s * 0.15, sy + s * 0.1 + stomp, s * 0.35, s * 0.7);
+        // 腿上的骨板
+        ctx.fillStyle = boneColor;
+        ctx.fillRect(sx - s * 0.55, sy + s * 0.3, s * 0.4, s * 0.08);
+        ctx.fillRect(sx + s * 0.1, sy + s * 0.4, s * 0.4, s * 0.08);
+
+        // 主体（巨大不规则椭圆）
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        const bodyPts = 12;
+        for (let i = 0; i < bodyPts; i++) {
+            const a = (i / bodyPts) * Math.PI * 2;
+            const noiseVal = Math.sin(i * 3.7 + t * 0.5) * s * 0.15;
+            const r = s * 1.1 + noiseVal + (i >= 2 && i <= 7 ? s * 0.2 : 0);
+            const px = sx + Math.cos(a) * r;
+            const py = sy + Math.sin(a) * r;
             if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
         }
         ctx.closePath();
         ctx.fill();
 
-        // 内部核心
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, this.size * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 眼睛
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(screenX - 10, screenY - 5, 6, 0, Math.PI * 2);
-        ctx.arc(screenX + 10, screenY - 5, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(screenX - 10, screenY - 5, 3, 0, Math.PI * 2);
-        ctx.arc(screenX + 10, screenY - 5, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 冲撞前摇警告效果
-        if (this.isWindup) {
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([10, 10]);
+        // 体内嵌入的人脸轮廓（3-4个）
+        ctx.fillStyle = 'rgba(106,32,32,0.4)';
+        const faces = [
+            { x: -s * 0.5, y: -s * 0.5, r: s * 0.2 },
+            { x: s * 0.55, y: -s * 0.3, r: s * 0.18 },
+            { x: s * 0.1, y: -s * 0.9, r: s * 0.22 },
+            { x: -s * 0.35, y: s * 0.2, r: s * 0.15 },
+        ];
+        for (const f of faces) {
             ctx.beginPath();
-            ctx.moveTo(screenX, screenY);
-            ctx.lineTo(
-                screenX + this.chargeDirection.x * 500,
-                screenY + this.chargeDirection.y * 500
-            );
+            ctx.ellipse(sx + f.x, sy + f.y, f.r, f.r * 1.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // 眼窝（两个暗点）
+            ctx.fillStyle = '#0a0505';
+            ctx.beginPath();
+            ctx.arc(sx + f.x - f.r * 0.3, sy + f.y - f.r * 0.1, f.r * 0.2, 0, Math.PI * 2);
+            ctx.arc(sx + f.x + f.r * 0.3, sy + f.y - f.r * 0.1, f.r * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(106,32,32,0.4)';
+        }
+
+        // 四只手臂
+        const armWave = Math.sin(t * 1.5) * s * 0.2;
+        ctx.fillStyle = bodyColor;
+        this._drawBossArm(ctx, sx - s * 1.0, sy - s * 0.2, -1.2, 0.3, s, armWave, boneColor);
+        this._drawBossArm(ctx, sx + s * 1.0, sy - s * 0.2, 1.2, -0.3, s, armWave, boneColor);
+        this._drawBossArm(ctx, sx - s * 1.2, sy + s * 0.3, -0.9, 0.8, s, -armWave, boneColor);
+        this._drawBossArm(ctx, sx + s * 1.2, sy + s * 0.3, 0.9, -0.8, s, -armWave, boneColor);
+
+        // 骨板凸起（背部和肩部）
+        ctx.fillStyle = boneColor;
+        const spikes = [
+            { ax: -1.1, ay: -0.6, h: 0.5 },
+            { ax: 1.1, ay: -0.6, h: 0.5 },
+            { ax: 0, ay: -1.2, h: 0.4 },
+            { ax: -0.7, ay: 0.7, h: 0.3 },
+            { ax: 0.7, ay: 0.7, h: 0.3 },
+        ];
+        for (const sp of spikes) {
+            ctx.beginPath();
+            ctx.moveTo(sx + sp.ax * s, sy + (sp.ay - 0.1) * s);
+            ctx.lineTo(sx + (sp.ax + 0.15) * s, sy + (sp.ay - sp.h) * s);
+            ctx.lineTo(sx + (sp.ax - 0.15) * s, sy + (sp.ay - sp.h) * s);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // 胸部腐化核心（脉动）
+        const corePulse = 1 + Math.sin(t * 3) * 0.15 + (1 - hpPct) * 0.2;
+        const coreR = s * 0.35 * corePulse;
+        ctx.fillStyle = coreColor;
+        ctx.beginPath();
+        ctx.arc(sx, sy + s * 0.05, coreR, 0, Math.PI * 2);
+        ctx.fill();
+        // 核心裂缝
+        ctx.strokeStyle = `rgba(255,200,100,${0.5 + (1 - hpPct) * 0.5})`;
+        ctx.lineWidth = 1.5 + (1 - hpPct) * 2;
+        ctx.beginPath();
+        ctx.moveTo(sx - coreR * 0.6, sy + s * 0.05 - coreR * 0.4);
+        ctx.lineTo(sx + coreR * 0.4, sy + s * 0.05 + coreR * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sx + coreR * 0.5, sy + s * 0.05 - coreR * 0.3);
+        ctx.lineTo(sx - coreR * 0.5, sy + s * 0.05 + coreR * 0.4);
+        ctx.stroke();
+
+        // 冲撞前摇
+        if (this.isWindup) {
+            ctx.strokeStyle = 'rgba(255,200,80,0.7)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([12, 8]);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + this.chargeDirection.x * 500, sy + this.chargeDirection.y * 500);
             ctx.stroke();
             ctx.setLineDash([]);
         }
 
         ctx.restore();
 
-        // AOE警告圈
+        // AOE 警告圈
         if (this.isAoeWarning) {
-            const aoeScreenX = this.aoeX - cameraX;
-            const aoeScreenY = this.aoeY - cameraY;
-            const warningProgress = 1 - this.aoeWarningTimer / this.aoeWarningDuration;
-
+            const aoeSx = this.aoeX - cameraX;
+            const aoeSy = this.aoeY - cameraY;
+            const wp = 1 - this.aoeWarningTimer / this.aoeWarningDuration;
             ctx.save();
-            ctx.strokeStyle = `rgba(255, 100, 100, ${0.5 + warningProgress * 0.5})`;
-            ctx.lineWidth = 3 + warningProgress * 3;
-            ctx.setLineDash([15, 10]);
+            ctx.strokeStyle = `rgba(255,100,80,${0.4 + wp * 0.5})`;
+            ctx.lineWidth = 2 + wp * 4;
+            ctx.setLineDash([12, 8]);
             ctx.beginPath();
-            ctx.arc(aoeScreenX, aoeScreenY, this.aoeRadius * (0.5 + warningProgress * 0.5), 0, Math.PI * 2);
+            ctx.arc(aoeSx, aoeSy, this.aoeRadius * (0.4 + wp * 0.6), 0, Math.PI * 2);
             ctx.stroke();
-
-            // 内部填充
-            ctx.fillStyle = `rgba(255, 100, 100, ${0.1 + warningProgress * 0.2})`;
+            ctx.fillStyle = `rgba(255,80,60,${0.08 + wp * 0.2})`;
             ctx.fill();
             ctx.setLineDash([]);
             ctx.restore();
+        }
+    }
+
+    _drawBossArm(ctx, x, y, dirAngle, droop, s, wave, boneColor) {
+        const segs = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (let i = 1; i <= segs; i++) {
+            const t = i / segs;
+            const px = x + Math.cos(dirAngle) * s * 1.2 * t;
+            const py = y + Math.sin(dirAngle) * s * 0.6 * t + droop * s * t * t + (i % 2 === 0 ? wave : -wave) * t;
+            ctx.lineTo(px, py);
+        }
+        ctx.lineWidth = s * 0.15;
+        ctx.strokeStyle = '#181010';
+        ctx.stroke();
+        // 骨节突起
+        for (let i = 1; i <= 2; i++) {
+            const t = i / 3;
+            const px = x + Math.cos(dirAngle) * s * 1.2 * t;
+            const py = y + Math.sin(dirAngle) * s * 0.6 * t + droop * s * t * t;
+            ctx.fillStyle = boneColor;
+            ctx.beginPath();
+            ctx.arc(px, py, s * 0.07, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // 手爪
+        const tipX = x + Math.cos(dirAngle) * s * 1.2;
+        const tipY = y + Math.sin(dirAngle) * s * 0.6 + droop * s + wave;
+        for (let ci = 0; ci < 3; ci++) {
+            const ca = dirAngle + Math.PI + (ci - 1) * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.cos(ca) * s * 0.2, tipY + Math.sin(ca) * s * 0.2);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = boneColor;
+            ctx.stroke();
         }
     }
 

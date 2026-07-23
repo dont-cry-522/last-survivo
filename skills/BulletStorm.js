@@ -108,7 +108,7 @@ class BulletStormSkills {
                         if (!nearest) break;
                         const a = Math.atan2(nearest.y - source.y, nearest.x - source.x);
                         const dmg = ctx.bullet.damage * (1 - p.decay);
-                        ctx.bulletManager.fire(source.x, source.y, a, dmg, ctx.bullet.speed, 0, nearest);
+                        ctx.bulletManager.fire(source.x, source.y, a, dmg, ctx.bullet.speed, 0, nearest, 1);
                         source = nearest;
                     }
                 });
@@ -137,7 +137,7 @@ class BulletStormSkills {
                         const spread = p.count > 1 ? (i - (p.count - 1) / 2) * p.spreadAngle / (p.count - 1) : 0;
                         const a = baseAngle + spread;
                         const dmg = ctx.bullet.damage * p.damageMul;
-                        ctx.bulletManager.fire(ctx.enemy.x, ctx.enemy.y, a, dmg, ctx.bullet.speed * 0.7, 0, null);
+                        ctx.bulletManager.fire(ctx.enemy.x, ctx.enemy.y, a, dmg, ctx.bullet.speed * 0.7, 0, null, 1);
                     }
                 });
             },
