@@ -401,7 +401,12 @@ class UIManager {
         ctx.fillText('操作说明', cx, panelY + 28);
 
         // 操作列表
-        const controls = [
+        const controls = document.body.classList.contains('touch-device') ? [
+            { key: '左侧摇杆', desc: '八方向移动' },
+            { key: '冲刺按钮', desc: '冲刺（无敌帧，2秒冷却）' },
+            { key: '顶部按钮', desc: '暂停 / 继续、重开、静音' },
+            { key: '升级卡片', desc: '点击选择技能或刷新选项' },
+        ] : [
             { key: 'W A S D', desc: '八方向移动' },
             { key: 'Shift', desc: '冲刺（无敌帧，2秒冷却）' },
             { key: 'ESC', desc: '暂停 / 继续游戏' },
@@ -600,7 +605,11 @@ class UIManager {
         // 操作说明
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.font = '14px Arial';
-        const instructions = [
+        const instructions = document.body.classList.contains('touch-device') ? [
+            '左侧摇杆移动 · 右侧按钮冲刺',
+            '自动攻击最近敌人 · 收集经验升级',
+            '顶部按钮暂停、重开或静音 · 横屏体验更佳',
+        ] : [
             'WASD - 移动    Shift - 冲刺',
             '自动攻击最近敌人    收集经验升级',
             'ESC - 暂停    R - 重新开始    M - 静音',

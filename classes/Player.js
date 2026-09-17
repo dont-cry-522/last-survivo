@@ -54,6 +54,7 @@ class Player {
         this.afterimageTimer = 0;
         this.trailTimer = 0;
 
+        this.touchKeys = {};
         this.keys = { w: false, a: false, s: false, d: false, shift: false };
 
         this.kills = 0;
@@ -108,10 +109,10 @@ class Player {
         if (this.dashCooldown > 0 || this.isDashing) return;
 
         let dx = 0, dy = 0;
-        if (this.keys.w) dy -= 1;
-        if (this.keys.s) dy += 1;
-        if (this.keys.a) dx -= 1;
-        if (this.keys.d) dx += 1;
+        if (this.keys.w || this.touchKeys.w) dy -= 1;
+        if (this.keys.s || this.touchKeys.s) dy += 1;
+        if (this.keys.a || this.touchKeys.a) dx -= 1;
+        if (this.keys.d || this.touchKeys.d) dx += 1;
 
         if (dx === 0 && dy === 0) {
             dx = Math.cos(this.angle);
@@ -277,10 +278,10 @@ class Player {
             }
         } else {
             let dx = 0, dy = 0;
-            if (this.keys.w) dy -= 1;
-            if (this.keys.s) dy += 1;
-            if (this.keys.a) dx -= 1;
-            if (this.keys.d) dx += 1;
+            if (this.keys.w || this.touchKeys.w) dy -= 1;
+            if (this.keys.s || this.touchKeys.s) dy += 1;
+            if (this.keys.a || this.touchKeys.a) dx -= 1;
+            if (this.keys.d || this.touchKeys.d) dx += 1;
             if (dx !== 0 && dy !== 0) { const len = Math.sqrt(dx * dx + dy * dy); dx /= len; dy /= len; }
             if (dx !== 0 || dy !== 0) this.angle = Math.atan2(dy, dx);
             this.x += dx * this.speed * deltaTime * 60;

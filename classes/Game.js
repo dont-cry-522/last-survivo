@@ -137,14 +137,19 @@ class Game {
             this.onKeyUp(e.key.toLowerCase());
         });
 
-        // 鼠标
-        this.canvas.addEventListener('mousemove', (e) => {
+        // 鼠标与触摸共用画布坐标；CSS 缩放不改变游戏世界。
+        const updatePointer = (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
+            this.mouseX = (e.clientX - rect.left) * this.canvas.width / rect.width;
+            this.mouseY = (e.clientY - rect.top) * this.canvas.height / rect.height;
+        };
+
+        this.canvas.addEventListener('mousemove', (e) => {
+            updatePointer(e);
         });
 
         this.canvas.addEventListener('click', (e) => {
+            updatePointer(e);
             this.onClick();
         });
     }
@@ -343,6 +348,8 @@ class Game {
             this.fpsTimer = 0;
             this.fpsFrames = 0;
         }
+
+        if (this.mobileControls) this.mobileControls.update();
 
         // 更新
         if (this.state === 'playing') {
